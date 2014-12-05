@@ -11,10 +11,12 @@
 #include <xdc/runtime/Error.h>
 #include <ti/sysbios/knl/Task.h>
 #include <xdc/runtime/System.h>
+#include <string.h>
+#include "Board.h"
 
-#define DEFAULT_RX_PRIORITY = 10		//! Default priority of reception task
-#define DEFAULT_RX_STACK = 2048			//! Default stack size of reception task
-#define DEFAULT_UART_BAUD = 115200		//! Default baud rate for UART
+#define DEFAULT_RX_PRIORITY 10		//! Default priority of reception task
+#define DEFAULT_RX_STACK 2048			//! Default stack size of reception task
+#define DEFAULT_UART_BAUD 115200		//! Default baud rate for UART
 
 static Bool hasStart = FALSE;					//! Task started status
 static Task_Handle rxTask = NULL;				//! Handle to the reception task
@@ -69,7 +71,7 @@ int8_t BtStack_stop(void)
 
 Bool BtStack_hasStarted(void)
 {
-	return hasStarted;
+	return hasStart;
 }
 
 Bool BtStack_hasCallback(void)
@@ -84,9 +86,9 @@ Bool BtStack_hasCallback(void)
 	}
 }
 
-int8_t BtStack_attachCallback(BtStack_callback callback)
+int8_t BtStack_attachCallback(BtStack_Callback callback)
 {
-	if (btStack_hasCallback())
+	if (BtStack_hasCallback())
 	{
 		return -1;
 	}
@@ -99,7 +101,7 @@ int8_t BtStack_attachCallback(BtStack_callback callback)
 
 int8_t BtStack_removeCallback(void)
 {
-	if (btStack_hasCallback())
+	if (BtStack_hasCallback())
 	{
 		rxCallback = NULL;
 		return 0;
@@ -124,7 +126,8 @@ int8_t BtStack_push(const BtStack_Frame* frame)
 	sentChar++;
 
 	// iterate through frame adding ESC characters where necessary
-	for (uint8_t i=0; i<KFP_FRAME_SIZE-2; i++)
+	uint8_t i;
+	for (i=0; i<KFP_FRAME_SIZE-2; i++)
 	{
 		switch(frame->b8[i])
 		{
@@ -166,16 +169,17 @@ int8_t BtStack_push(const BtStack_Frame* frame)
 	return ret;
 }
 
-void BtStack_framePrint(const BtStackFrame* frame, KfpPrintFormat format)
+void BtStack_framePrint(const BtStack_Frame* frame, KfpPrintFormat format)
 {
 	System_printf("ID =");
-	for (uint8_t i=0; i<4; i++)
+	uint8_t i;
+	for (i=0; i<4; i++)
 	{
 		System_printf(" %u", frame->id.b8[i]);
 	}
 
 	System_printf(" Data =");
-	for (uint8_t i=0; i<8; i++)
+	for (i=0; i<8; i++)
 	{
 		if (format == KFPPRINTFORMAT_ASCII)
 		{
@@ -187,4 +191,9 @@ void BtStack_framePrint(const BtStackFrame* frame, KfpPrintFormat format)
 		}
 	}
 	System_flush();
+}
+
+void rxFxn(UArg param0, UArg param1)
+{
+
 }

@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="windows-1252"?>
+<!--  This file conforms to the DTD xdc/bld/build.dtd -->
+<package name="xconfig_matilda" version="" producerId="undefined">
+    <units>
+    </units>
+    <sources>
+        <srcFile name="package/cfg/matilda_pem4f.c"/>
+    </sources>
+    <configscripts>
+        <srcFile name="C:/Users/Ultima1/Github/Tron Academy/Matilda/matilda.cfg"/>
+    </configscripts>
+    <makefiles>
+        <srcFile name="package.mak" src="package.bld"/>
+        <srcFile name="package/package.xdc.dep" src="package.xdc"/>
+        <srcFile name="package/cfg/matilda_pem4f.mak" src="package.bld"/>
+        <srcFile name="package/cfg/matilda_pem4f.oem4f.dep" src="package/cfg/matilda_pem4f.c"/>
+        <srcFile name="package/cfg/matilda_pem4f.dep" src="package/cfg/matilda_pem4f.cfg"/>
+        <srcFile name="package/cfg/matilda.xem4f.mak" src="package.bld"/>
+        <srcFile name="package/rel/xconfig_matilda.tar.dep" src="package/rel/xconfig_matilda.xdc.inc"/>
+    </makefiles>
+    <targets>
+        <target name="ti.targets.arm.elf.M4F"
+            version="ti.targets.arm.elf.M4F{1,0,5.1,8"
+            rawVersion="5.1.8"
+            platform="ti.platforms.stellaris:LM4FSXLH5BB:1"
+            isa="v7M4"
+            suffix="em4f"
+            rootDir="C:/Dev/ti/ccsv6/tools/compiler/arm_5.1.8"
+            os="undefined"
+            rts="ti.targets.arm.rtsarm">
+            <model endian="little"
+                codeModel="thumb2"
+                dataModel="undefined"/>
+        </target>
+    </targets>
+    <libraries>
+    </libraries>
+    <configurations>
+    <configuration name="matilda"
+        pname="matilda.pem4f"
+        target="ti.targets.arm.elf.M4F"
+        platform="ti.platforms.tiva:TM4C123GH6PM"
+        profile="release"
+        isPartial="false"
+        xCfgScript="package/cfg/matilda_pem4f.cfg"
+        xCfgPrefix="package/cfg/matilda_pem4f"
+        cfgScript="C:/Users/Ultima1/Github/Tron Academy/Matilda/matilda.cfg"
+        cfgArgs="null"
+        />
+    </configurations>
+    <executables>
+    <executable name="matilda"
+        pname="matilda.xem4f"
+        target="ti.targets.arm.elf.M4F"
+        platform="ti.platforms.tiva:TM4C123GH6PM"
+        profile="release"
+        xCfgScript="package/cfg/matilda_pem4f.cfg"
+        xCfgPrefix="package/cfg/matilda_pem4f"
+        cfgScript="C:/Users/Ultima1/Github/Tron Academy/Matilda/matilda.cfg"
+        cfgArgs="null"
+        />
+    </executables>
+    <tests>
+    <test exeName="matilda.xem4f"
+        args=""
+        groupName="matilda.xem4f"
+        refOutput="undefined"
+        refExitCode="0"
+        execArgs=""
+        />
+    </tests>
+    <releases relDir="package/rel/">
+    <release name="xconfig_matilda"
+        pname="xconfig_matilda.tar"
+        label="default"
+    >
+        <file name="package/package.bld.xml"/>
+        <file name="package/build.cfg"/>
+        <file name="package/package.xdc.inc"/>
+    </release>
+    </releases>
+    <repositories>
+    </repositories>
+</package>

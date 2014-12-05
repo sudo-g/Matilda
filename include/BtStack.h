@@ -61,7 +61,7 @@ typedef union
  * \typedef BtStack_callback
  * \brief Bluetooth stack service callback type
  */
-typedef void (*BtStack_callback)(const BtStack_Frame*);
+typedef void (*BtStack_Callback)(const BtStack_Frame*);
 
 
 /**
@@ -98,7 +98,7 @@ Bool BtStack_hasCallback(void);
  * \param callback Callback to execute on reception event
  * \return Returns 0 if callback was NULL, -1 if a callback was already attached
  */
-int8_t BtStack_attachCallback(BtStack_callback callback);
+int8_t BtStack_attachCallback(BtStack_Callback callback);
 
 /**
  * \brief Removes reception event callback

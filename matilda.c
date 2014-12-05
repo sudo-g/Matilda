@@ -41,17 +41,10 @@
 /* BIOS Header files */
 #include <ti/sysbios/BIOS.h>
 
-/* TI-RTOS Header files */
-#include <ti/drivers/GPIO.h>
-// #include <ti/drivers/I2C.h>
-// #include <ti/drivers/SPI.h>
-// #include <ti/drivers/UART.h>
-// #include <ti/drivers/Watchdog.h>
-// #include <ti/drivers/WiFi.h>
-
 /* Board Header file */
 #include "Board.h"
 
+/* Killalot Framework header files */
 #include "BtStack.h"
 
 /*
@@ -65,16 +58,15 @@ Int main(Void)
     // Board_initDMA();
     // Board_initI2C();
     // Board_initSPI();
-    // Board_initUART();
+    Board_initUART();
     // Board_initUSB(Board_USBDEVICE);
     // Board_initWatchdog();
     // Board_initWiFi();
 
-    /* Turn on user LED */
-    GPIO_write(Board_STATUSLED, Board_LED_ON);
+    /* Start services */
+    BtStack_start();
 
-    System_printf("Starting the example\nSystem provider is set to SysMin. "
-                  "Halt the target and use ROV to view output.\n");
+    System_printf("Matilda... All systems are go\n");
     /* SysMin will only print to the console when you call flush or exit */
     System_flush();
 
