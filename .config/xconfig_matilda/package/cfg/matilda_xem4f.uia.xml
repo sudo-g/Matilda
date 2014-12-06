@@ -1676,12 +1676,18 @@
       <cFileName>null</cFileName>
    </modIdMap>
    <modIdMap id="12">
+      <moduleName>ti.drivers.I2C</moduleName>
+      <packageVersion>1, 0, 0</packageVersion>
+      <packageBase>C:/Dev/ti/tirtos_1_21_00_09/packages/ti/drivers/</packageBase>
+      <cFileName>I2C.c</cFileName>
+   </modIdMap>
+   <modIdMap id="13">
       <moduleName>ti.drivers.GPIO</moduleName>
       <packageVersion>1, 0, 0</packageVersion>
       <packageBase>C:/Dev/ti/tirtos_1_21_00_09/packages/ti/drivers/</packageBase>
       <cFileName>GPIO.c</cFileName>
    </modIdMap>
-   <modIdMap id="13">
+   <modIdMap id="14">
       <moduleName>ti.drivers.UART</moduleName>
       <packageVersion>1, 0, 0</packageVersion>
       <packageBase>C:/Dev/ti/tirtos_1_21_00_09/packages/ti/drivers/</packageBase>
@@ -1753,13 +1759,13 @@
       <packageBase>C:/Dev/ti/tirtos_1_21_00_09/products/uia_1_04_00_06/packages/ti/uia/runtime/</packageBase>
       <cFileName>null</cFileName>
    </modIdMap>
-   <modIdMap id="14">
+   <modIdMap id="15">
       <moduleName>ti.uia.runtime.LogSync_CpuTimestampProxy</moduleName>
       <packageVersion>1, 0, 0, 2</packageVersion>
       <packageBase>C:/Dev/ti/tirtos_1_21_00_09/products/uia_1_04_00_06/packages/ti/uia/runtime/</packageBase>
       <cFileName>null</cFileName>
    </modIdMap>
-   <modIdMap id="15">
+   <modIdMap id="16">
       <moduleName>ti.uia.runtime.LogSync_GlobalTimestampProxy</moduleName>
       <packageVersion>1, 0, 0, 2</packageVersion>
       <packageBase>C:/Dev/ti/tirtos_1_21_00_09/products/uia_1_04_00_06/packages/ti/uia/runtime/</packageBase>
