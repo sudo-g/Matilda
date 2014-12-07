@@ -14,7 +14,7 @@
 #include <string.h>
 #include "Board.h"
 
-#define DEFAULT_RX_PRIORITY 10		//! Default priority of reception task
+#define DEFAULT_RX_PRIORITY 10			//! Default priority of reception task
 #define DEFAULT_RX_STACK 2048			//! Default stack size of reception task
 #define DEFAULT_UART_BAUD 115200		//! Default baud rate for UART
 
@@ -156,6 +156,7 @@ int8_t BtStack_push(const BtStack_Frame* frame)
 	UART_Params params;
 	UART_Params_init(&params);
 	params.baudRate = uartBaud;
+	params.writeMode = UART_MODE_BLOCKING;
 	params.writeDataMode = UART_DATA_BINARY;
 	params.readDataMode = UART_DATA_BINARY;
 	params.readReturnMode = UART_RETURN_FULL;
@@ -211,6 +212,7 @@ void rxFxn(UArg param0, UArg param1)
 		UART_Params_init(&params);
 		params.baudRate = uartBaud;
 		params.writeDataMode = UART_DATA_BINARY;
+		params.readMode = UART_MODE_BLOCKING;
 		params.readDataMode = UART_DATA_BINARY;
 		params.readReturnMode = UART_RETURN_FULL;
 		params.readEcho = UART_ECHO_OFF;
