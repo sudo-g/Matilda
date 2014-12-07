@@ -8,7 +8,7 @@ This project is built using the CCS toolchain. CCS 6.x is recommended.
 
 This project uses TI-RTOS 1.21 (do not use newer versions). The TI-RTOS 1.21
 CCS add-on must be installed in order for this project to build. Download the
-plugin from (here)[http://software-dl.ti.com/dsps/dsps_public_sw/sdo_sb/targetcontent/mcusdk/index.html].
+plugin from [here](http://software-dl.ti.com/dsps/dsps_public_sw/sdo_sb/targetcontent/mcusdk/index.html).
 
 #Peripherals Exercised
 ##UART
