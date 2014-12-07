@@ -16,6 +16,6 @@ if (!(target instanceof xdc.module("xdc.bld.ITarget").Module)) {
 }
 
 /* configuro was passed the target's rootDir explicitly */
-target.rootDir = 'C:/Dev/ti/ccsv6/tools/compiler/arm_5.1.8';
+target.rootDir = 'C:/Dev/ti/ccsv6/tools/compiler/arm_5.1.9';
 
 Build.targets = [target];
