@@ -16,9 +16,9 @@ This project uses gitflow. Use of SourceTree is recommended to keep branch
 usage consistent. To add features to this project, create an issue on
 this repository's space on GitHub. The personnel adding this feature should
 create a new branch on develop (SourceTree manages to automatically) and name
-the branch with this syntax: "<issue no.>_<issue name>" (although spaces need
+the branch with this syntax: "\<issue no.\>_\<issue name\>" (although spaces need
 to be substituted with "_" as git doesn't allow spaces in branch names). Every 
-commit to that branch should then have the following syntax: "#<issue no.> <issue_name>: <message>".
+commit to that branch should then have the following syntax: "#\<issue no.\> \<issue_name\>: \<message\>".
 
 #Peripherals Exercised
 ##UART
@@ -38,9 +38,9 @@ The board integrated status LED is controlled by GPIO. It is declared under
 #Architecture
 Matilda uses a multi-layered service orientated architecture. With exception,
 it encompasses three layers:
-*Hardware layer
-*Service layer
-*Application layer
+* Hardware layer
+* Service layer
+* Application layer
 
 This design principle encourages modules from any layer to only import modules
 from layers below it.
@@ -55,9 +55,9 @@ This layer includes drivers for UART, I<sup>2</sup>C and GPIO.
 ##Service layer
 The layer above the hardware layer is the service layer. Purposes of this layer
 include:
-*Process unstructured data incoming from the hardware layer into abstract structured data
-*Convert structured data from application into bytestreams for use with the hardware layer
-*Forward to the appropriate application module based on data received
+* Process unstructured data incoming from the hardware layer into abstract structured data
+* Convert structured data from application into bytestreams for use with the hardware layer
+* Forward to the appropriate application module based on data received
  
 This layer includes bluetooth message handling and interface API to Shunt and Bash. 
 
@@ -77,6 +77,3 @@ This layer includes bluetooth drive control, camera image transmission and conso
 Applications are encouraged to use threads on service callbacks.
 All header files to applications must be placed in the 'include' folder. All
 source files to application must be placed in root.
-
-
-
