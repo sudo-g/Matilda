@@ -1,5 +1,5 @@
 /**
- * \file btStack.c
+ * \file BtStack.c
  * \brief Implements btStack service
  * \author George Xian
  * \version 0.1
@@ -14,7 +14,7 @@
 #include <string.h>
 #include "Board.h"
 
-#define DEFAULT_RX_PRIORITY 10		//! Default priority of reception task
+#define DEFAULT_RX_PRIORITY 10			//! Default priority of reception task
 #define DEFAULT_RX_STACK 2048			//! Default stack size of reception task
 #define DEFAULT_UART_BAUD 115200		//! Default baud rate for UART
 
@@ -156,6 +156,7 @@ int8_t BtStack_push(const BtStack_Frame* frame)
 	UART_Params params;
 	UART_Params_init(&params);
 	params.baudRate = uartBaud;
+	params.writeMode = UART_MODE_BLOCKING;
 	params.writeDataMode = UART_DATA_BINARY;
 	params.readDataMode = UART_DATA_BINARY;
 	params.readReturnMode = UART_RETURN_FULL;
@@ -195,5 +196,87 @@ void BtStack_framePrint(const BtStack_Frame* frame, KfpPrintFormat format)
 
 void rxFxn(UArg param0, UArg param1)
 {
+	// Declare state variables
+	Bool inFrame = FALSE;
+	uint8_t frIndex = 0;
 
+	// Buffers
+	char tempRx[1];
+	BtStack_Frame tempFr;
+
+	while(TRUE)
+	{
+		// open socket
+		UART_Handle s;
+		UART_Params params;
+		UART_Params_init(&params);
+		params.baudRate = uartBaud;
+		params.writeDataMode = UART_DATA_BINARY;
+		params.readMode = UART_MODE_BLOCKING;
+		params.readDataMode = UART_DATA_BINARY;
+		params.readReturnMode = UART_RETURN_FULL;
+		params.readEcho = UART_ECHO_OFF;
+		s = UART_open(Board_BT1, &params);
+
+		// read UART buffer and decode
+		UART_read(s, tempRx, 1);
+		switch(tempRx[0])
+		{
+		case(SLIP_END):
+				if (inFrame)
+				{
+					if (frIndex == (KFP_FRAME_SIZE-2))
+					{
+						// end of frame, call callback to interpret it
+						if (rxCallback != NULL)
+						{
+							rxCallback(&tempFr);
+						}
+					}
+
+					// ignore corrupt frames
+					frIndex = 0;
+					inFrame = FALSE;
+
+					break;
+				}
+				else
+				{
+					inFrame = TRUE;		// start new frame
+					frIndex = 0;
+					break;
+				}
+		case(SLIP_ESC):
+				if (inFrame)
+				{
+					UART_read(s, tempRx, 1);
+					switch(tempRx[0])
+					{
+					case(SLIP_ESC_END):
+							tempFr.b8[frIndex] = SLIP_END;
+							frIndex++;
+							break;
+					case(SLIP_ESC_ESC):
+							tempFr.b8[frIndex] = SLIP_ESC;
+							frIndex++;
+							break;
+					default:
+						break;	// invalid post ESC character
+					}
+					break;
+				}
+				else
+				{
+					break;		// ignore corrupt frames
+				}
+		default:
+			if (inFrame)
+			{
+				// standard character store
+				tempFr.b8[frIndex] = tempRx[0];
+				frIndex++;
+				break;
+			}
+		}
+	}
 }

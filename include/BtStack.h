@@ -1,5 +1,5 @@
 /**
- * \file btStack.h
+ * \file BtStack.h
  * \brief Declares btStack service functions
  * \author George Xian
  * \version 0.1
@@ -22,7 +22,7 @@
 typedef enum {KFPPRINTFORMAT_ASCII, KFPPRINTFORMAT_HEX} KfpPrintFormat;
 
 /**
- * \struct BtStackId
+ * \struct BtStack_Id
  * \brief Allows ID field of KFP to be accessed bytewise or wordwise of Thumb or ARM
  */
 typedef union
@@ -33,7 +33,7 @@ typedef union
 } BtStack_Id;
 
 /**
- * \struct BtStackData
+ * \struct BtStack_Data
  * \brief Allows payload field of KFP to be accessed bytewise or wordwise of Thumb or ARM
  */
 typedef union
@@ -44,7 +44,7 @@ typedef union
 } BtStack_Data;
 
 /**
- * \struct BtStackFrame
+ * \struct BtStack_Frame
  * \brief Represents KFP, allows access as structure or bytestream
  */
 typedef union

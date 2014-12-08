@@ -97,7 +97,7 @@ C:/Dev/ti/xdctools_3_25_04_88/packages/xdc/tools/configuro/template/package.xs.x
 package.mak: C:/Dev/ti/xdctools_3_25_04_88/packages/xdc/tools/configuro/template/package.xs.xdt
 endif
 
-ti.targets.arm.elf.M4F.rootDir ?= C:/Dev/ti/ccsv6/tools/compiler/arm_5.1.8
+ti.targets.arm.elf.M4F.rootDir ?= C:/Dev/ti/ccsv6/tools/compiler/arm_5.1.9
 ti.targets.arm.elf.packageBase ?= C:/Dev/ti/xdctools_3_25_04_88/packages/ti/targets/arm/elf/
 .PRECIOUS: $(XDCCFGDIR)/%.oem4f
 .PHONY: all,em4f .dlls,em4f .executables,em4f test,em4f

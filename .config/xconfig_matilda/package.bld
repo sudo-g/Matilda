@@ -11,7 +11,7 @@ var makeAssembly = false;
 var Executable = xdc.module('xdc.bld.Executable');
 
 var exeOpts = new Executable.Attrs({
-        cfgScript: 'C:/Users/Ultima1/Github/Tron Academy/Matilda/matilda.cfg',
+        cfgScript: 'V:/Killalot/Matilda/matilda.cfg',
         profile: 'release',
         cfgHome: 'xconfig_matilda',
 });
@@ -40,8 +40,8 @@ else {
 }
 
 var thisObj = {
-    cfg:        'C:/Users/Ultima1/Github/Tron Academy/Matilda/matilda.cfg',
-    outputPath: 'C:/Users/Ultima1/Github/Tron Academy/Matilda/.config/xconfig_matilda',
+    cfg:        'V:/Killalot/Matilda/matilda.cfg',
+    outputPath: 'V:/Killalot/Matilda/.config/xconfig_matilda',
     exeName:    'matilda' + suffix,
     exeIntName: 'matilda' + suffix.replace('.', '_'),
     targ:       targ,
