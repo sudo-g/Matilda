@@ -16,9 +16,9 @@ This project uses gitflow. Use of SourceTree is recommended to keep branch
 usage consistent. To add features to this project, create an issue on
 this repository's space on GitHub. The personnel adding this feature should
 create a new branch on develop (SourceTree manages to automatically) and name
-the branch with this syntax: "\<issue no.\>_\<issue name\>" (although spaces need
-to be substituted with "_" as git doesn't allow spaces in branch names). Every 
-commit to that branch should then have the following syntax: "#\<issue no.\> \<issue_name\>: \<message\>".
+the branch with this syntax: "\<issue no.\>\_\<issue name\>" (although spaces need
+to be substituted with "\_" as git doesn't allow spaces in branch names). Every 
+commit to that branch should then have the following syntax: "#\<issue no.\> \<issue\_name\>: \<message\>".
 
 #Peripherals Exercised
 ##UART
