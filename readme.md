@@ -6,6 +6,11 @@ and processes them. It delegates tasks to Shunt or Bash if necessary.
 #Build configuration
 This project is built using the CCS toolchain. CCS 6.x is recommended.
 
+It is recommended you create a new workspace for this project. This 
+project should be imported by selecting 'Existing CCS Projects into Workspace'
+under the import menu. Other Matador components may also be imported 
+into this workspace.
+
 This project uses TI-RTOS 1.21 (do not use newer versions). The TI-RTOS 1.21
 CCS add-on must be installed in order for this project to build. Download the
 plugin from [here](http://software-dl.ti.com/dsps/dsps_public_sw/sdo_sb/targetcontent/mcusdk/index.html).
