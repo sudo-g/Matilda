@@ -13,7 +13,7 @@
 void BtCtl_rxCallback(const BtStack_Frame* frame)
 {
 	// frame identified as first 8 channels, which are analog
-	if (frame->id.b8[0] == 1)
+	if (frame->id.b8[0] == 0)
 	{
 		// channel 2 and 3 of Phantom is yaw and power respectively
 		PwrMgmt_drive(frame->payload.b8[3], frame->payload.b8[2]);
@@ -28,7 +28,7 @@ void BtCtl_rxCallback(const BtStack_Frame* frame)
 		{
 			PwrMgmt_weapon(WEAPON_1, 1);
 		}
-		else
+		else if (frame->payload.b8[2] == 0)
 		{
 			PwrMgmt_weapon(WEAPON_1, 0);
 		}

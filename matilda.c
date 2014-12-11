@@ -47,6 +47,8 @@
 /* Killalot Framework header files */
 #include "BtStack.h"
 
+#include "BtCtl.h"
+
 /*
  *  ======== main ========
  */
@@ -64,6 +66,7 @@ Int main(Void)
     // Board_initWiFi();
 
     /* Start services */
+    BtStack_attachCallback(BtCtl_rxCallback);
     BtStack_start();
 
     System_printf("Matilda... All systems are go\n");
