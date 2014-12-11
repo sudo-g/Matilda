@@ -9,7 +9,9 @@
 #include "BtStack.h"
 
 #include <xdc/runtime/Error.h>
+#include <ti/sysbios/BIOS.h>
 #include <ti/sysbios/knl/Task.h>
+#include <ti/sysbios/knl/Semaphore.h>
 #include <xdc/runtime/System.h>
 #include <string.h>
 #include "Board.h"
@@ -23,6 +25,8 @@ static Task_Handle rxTask = NULL;				//! Handle to the reception task
 static int8_t rxPriority = DEFAULT_RX_PRIORITY;	//! Priority of reception task
 static uint16_t rxStackSize = DEFAULT_RX_STACK;	//! Stack size of reception task
 static BtStack_Callback rxCallback = NULL;		//! Function to call on receive event
+static Semaphore_Handle rxSem = NULL;			//! Return CPU time from reception task
+static char tempRx[1];							//! Reception buffer
 
 static uint32_t uartBaud = DEFAULT_UART_BAUD;	//! Baud rate to initiate UART peripheral to
 
@@ -30,6 +34,14 @@ static uint32_t uartBaud = DEFAULT_UART_BAUD;	//! Baud rate to initiate UART per
  * \brief Function executed by the reception task
  */
 void rxFxn(UArg unused0, UArg unused1);
+
+/**
+ * \brief Callback on an on receive event
+ *
+ * \param handle UartHandle concerned with the reception
+ * \param received Character received
+ */
+void onReceive(UART_Handle handle, char* received);
 
 int8_t BtStack_start(void)
 {
@@ -39,15 +51,19 @@ int8_t BtStack_start(void)
 		return -1;
 	}
 
+	// generic error block
+	Error_Block eb;
+	Error_init(&eb);
+
+	// create receive semaphore
+	rxSem = Semaphore_create(1, NULL, &eb);
+
 	// creating the task
 	Task_Params params;
 	Task_Params_init(&params);
 	params.instance->name = "btStack::rx";
 	params.priority = rxPriority;
 	params.stackSize = rxStackSize;
-
-	Error_Block eb;
-	Error_init(&eb);
 
 	rxTask = Task_create((Task_FuncPtr) rxFxn, &params, &eb);
 	if (rxTask == NULL)
@@ -64,6 +80,7 @@ int8_t BtStack_start(void)
 int8_t BtStack_stop(void)
 {
 	Task_delete(&rxTask);
+	rxSem = NULL;
 	hasStart = FALSE;
 
 	return 0;
@@ -201,25 +218,30 @@ void rxFxn(UArg param0, UArg param1)
 	uint8_t frIndex = 0;
 
 	// Buffers
-	char tempRx[1];
 	BtStack_Frame tempFr;
 
 	while(TRUE)
 	{
+		// semaphore must always be 0 on read so that it will wait until read is finished
+		Semaphore_pend(rxSem, BIOS_WAIT_FOREVER);
+
 		// open socket
 		UART_Handle s;
 		UART_Params params;
 		UART_Params_init(&params);
 		params.baudRate = uartBaud;
 		params.writeDataMode = UART_DATA_BINARY;
-		params.readMode = UART_MODE_BLOCKING;
+		params.readMode = UART_MODE_CALLBACK;
+		params.readCallback = (UART_Callback) onReceive;
 		params.readDataMode = UART_DATA_BINARY;
 		params.readReturnMode = UART_RETURN_FULL;
 		params.readEcho = UART_ECHO_OFF;
 		s = UART_open(Board_BT1, &params);
 
 		// read UART buffer and decode
-		UART_read(s, tempRx, 1);
+		UART_read(s, NULL, 1);
+		Semaphore_pend(rxSem, BIOS_WAIT_FOREVER);
+
 		switch(tempRx[0])
 		{
 		case(SLIP_END):
@@ -279,4 +301,10 @@ void rxFxn(UArg param0, UArg param1)
 			}
 		}
 	}
+}
+
+void onReceive(UART_Handle handle, char* received)
+{
+	strncpy(tempRx, received, 1);
+	Semaphore_post(rxSem);
 }
