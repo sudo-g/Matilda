@@ -10,9 +10,13 @@
 #define BT_STACK
 
 #include <ti/drivers/UART.h>
+#include <ti/sysbios/BIOS.h>
+#include <ti/sysbios/knl/Task.h>
 
 #define KFP_FRAME_SIZE 14	//! No. of data bytes in Killalot frame protocol
 #define KFP_WORST_SIZE 26	//! Maximum frame size if escape characters are used
+
+#define MAX_RX_CALLBACKS 4	//! Maximum number of callbacks attachable to receive event
 
 #define SLIP_END 0xC0		//! SLIP END character
 #define SLIP_ESC 0xDB		//! SLIP ESC character
@@ -20,6 +24,7 @@
 #define SLIP_ESC_ESC 0xDD	//! Used to send 0xDB when preceded by ESC character
 
 typedef enum {KFPPRINTFORMAT_ASCII, KFPPRINTFORMAT_HEX} KfpPrintFormat;
+typedef enum {BTBAUD_9600=9600, BTBAUD_19200=19200, BTBAUD_38400=38400, BTBAUD_57600=57600, BTBAUD_115200=115200} BtBaud;
 
 /**
  * \struct BtStack_Id
@@ -54,7 +59,7 @@ typedef union
 		BtStack_Id id;				//! 4 bytes ID
 		BtStack_Data payload;		//! 8 bytes payload
 	};
-	uint8_t b8[KFP_FRAME_SIZE-2];		//! bytestream access
+	uint8_t b8[KFP_FRAME_SIZE-2];	//! bytestream access
 } BtStack_Frame;
 
 /**
@@ -63,63 +68,87 @@ typedef union
  */
 typedef void (*BtStack_Callback)(const BtStack_Frame*);
 
+/**
+ * \struct BtStack_SvcHandle
+ * \brief Handler to an instance of a BtStack service
+ */
+typedef struct
+{
+	UInt uartPeriphHandle;		//! UART peripheral connected to bluetooth module
+	BtBaud baud;				//! Baud rate of UART peripheral to use
+
+	Bool started;				//! Service status
+	Task_Handle rxTask;			//! Handle to the reception task
+	int8_t rxPriority;			//! Reception task priority
+	uint16_t rxStackSize;		//! Stack size allocation to reception task
+	void (*rxFxn)(UArg, UArg);	//! Function reception task executes
+
+	BtStack_Callback rxCallbacks[MAX_RX_CALLBACKS];	//! Callbacks on receive event
+	uint8_t numCallbacks;
+} BtStack_SvcHandle;
+
+/**
+ * \brief Initializes handle for default service configuration
+ *
+ * \param handle Pointer to handle
+ * \param uartPeriphHandle UART peripheral connected to bluetooth to use
+ */
+void BtStack_handleInit(BtStack_SvcHandle* handle, UInt uartPeriphHandle);
 
 /**
  * \brief Starts bluetooth stack service
  *
- * \return Returns 0 for success, -1 if service already started and -2 for reception thread start failure
+ * \param handle Pointer to the handle containing configuration for service
  */
-int8_t BtStack_start(void);
+void BtStack_start(BtStack_SvcHandle* handle);
 
 /**
  * \brief Stops bluetooth stack service
  *
+ * \param handle Pointer to the handle of the service instance to be stopped
  * \return Returns 0 for success, -1 for failure
  */
-int8_t BtStack_stop(void);
+void BtStack_stop(BtStack_SvcHandle* handle);
 
 /**
  * \brief Returns whether service has started
  *
+ * \param handle Pointer to the handle of the service instance to be tested
  * \return Flag indicating whether service has started
  */
-Bool BtStack_hasStarted(void);
-
-/**
- * \brief Checks whether this service has callback attached
- *
- * \return Flag indicating whether callback is attached to this service
- */
-Bool BtStack_hasCallback(void);
+Bool BtStack_hasStarted(const BtStack_SvcHandle* handle);
 
 /**
  * \brief Attach callback for reception event
  *
+ * \param handle Pointer to the handle of the service instance to modify
  * \param callback Callback to execute on reception event
- * \return Returns 0 if callback was NULL, -1 if a callback was already attached
+ * \return Returns 0 for success, -1 if callback queue is full, -2 if service running
  */
-int8_t BtStack_attachCallback(BtStack_Callback callback);
+int8_t BtStack_attachCallback(BtStack_SvcHandle* handle, BtStack_Callback callback);
 
 /**
- * \brief Removes reception event callback
+ * \brief Removes all reception event callbacks
  *
- * \return Returns 0 for success, -1 if existing callback was NULL
+ * \param handle Pointer to the handle of the service instance to modify
+ * \return Returns 0 for success, -1 if service running
  */
-int8_t BtStack_removeCallback(void);
+int8_t BtStack_removeCallbacks(BtStack_SvcHandle* handle);
 
 /**
  * \brief Pushes a frame to the back of the send queue
  *
+ * \param handle Pointer to the handle of the service instance to send with
  * \param frame Frame to send
- * \returns Number of bytes written
+ * \returns Number of bytes written, -1 if failure
  */
-int8_t BtStack_push(const BtStack_Frame* frame);
+int8_t BtStack_push(const BtStack_SvcHandle* handle, const BtStack_Frame* frame);
 
 /**
  * \brief Prints KFP frames to the console
  *
  * \param frame Frame to print
- * \param format Print frame as a series of ascii characters or hexadecimal numbers
+ * \param format Print frame as a series of ASCII characters or hexadecimal numbers
  */
 void BtStack_framePrint(const BtStack_Frame* frame, KfpPrintFormat format);
 
