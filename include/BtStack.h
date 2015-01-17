@@ -1,6 +1,6 @@
 /**
  * \file BtStack.h
- * \brief Declares btStack service functions
+ * \brief Declares bluetooth stack service functions
  * \author George Xian
  * \version 0.1
  * \date 2014-11-30
@@ -9,14 +9,13 @@
 #ifndef BT_STACK
 #define BT_STACK
 
-#include <ti/drivers/UART.h>
-#include <ti/sysbios/BIOS.h>
 #include <ti/sysbios/knl/Task.h>
+#include <ti/sysbios/knl/Queue.h>
+#include <ti/sysbios/BIOS.h>
+#include <ti/drivers/UART.h>
 
 #define KFP_FRAME_SIZE 14	//! No. of data bytes in Killalot frame protocol
 #define KFP_WORST_SIZE 26	//! Maximum frame size if escape characters are used
-
-#define MAX_RX_CALLBACKS 4	//! Maximum number of callbacks attachable to receive event
 
 #define SLIP_END 0xC0		//! SLIP END character
 #define SLIP_ESC 0xDB		//! SLIP ESC character
@@ -69,38 +68,51 @@ typedef union
 typedef void (*BtStack_Callback)(const BtStack_Frame*);
 
 /**
+ * \struct BtStack_Listener
+ * \brief Wraps application callbacks for use with queue
+ */
+typedef struct
+{
+	Queue_Elem _elem;
+	BtStack_Callback callback;
+} BtStack_Listener;
+
+/**
  * \struct BtStack_SvcHandle
  * \brief Handler to an instance of a BtStack service
  */
 typedef struct
 {
-	UInt uartPeriphHandle;		//! UART peripheral connected to bluetooth module
-	BtBaud baud;				//! Baud rate of UART peripheral to use
+	UInt uartPeriphIndex;		//! UART peripheral connected to bluetooth module
+	BtBaud baud;				//! Baud for UART peripheral
 
 	Bool started;				//! Service status
+	uint8_t rxSleep;			//! Number of ticks to sleep after complete frame
+
+	UART_Handle btSocket;		//! Socket to UART driver
 	Task_Handle rxTask;			//! Handle to the reception task
 	int8_t rxPriority;			//! Reception task priority
 	uint16_t rxStackSize;		//! Stack size allocation to reception task
 	void (*rxFxn)(UArg, UArg);	//! Function reception task executes
 
-	BtStack_Callback rxCallbacks[MAX_RX_CALLBACKS];	//! Callbacks on receive event
-	uint8_t numCallbacks;
+	Queue_Handle recvEventQ;	//! Applications bound to this service
 } BtStack_SvcHandle;
 
 /**
  * \brief Initializes handle for default service configuration
  *
  * \param handle Pointer to handle
- * \param uartPeriphHandle UART peripheral connected to bluetooth to use
+ * \param uartPeriphIndex UART peripheral connected to bluetooth to use
  */
-void BtStack_handleInit(BtStack_SvcHandle* handle, UInt uartPeriphHandle);
+void BtStack_handleInit(BtStack_SvcHandle* handle, UInt uartPeriphIndex);
 
 /**
  * \brief Starts bluetooth stack service
  *
  * \param handle Pointer to the handle containing configuration for service
+ * \return Returns 0 for success, -1 if UART socket failed to open, -2 if reception task failed to start
  */
-void BtStack_start(BtStack_SvcHandle* handle);
+int8_t BtStack_start(BtStack_SvcHandle* handle);
 
 /**
  * \brief Stops bluetooth stack service
@@ -108,7 +120,7 @@ void BtStack_start(BtStack_SvcHandle* handle);
  * \param handle Pointer to the handle of the service instance to be stopped
  * \return Returns 0 for success, -1 for failure
  */
-void BtStack_stop(BtStack_SvcHandle* handle);
+int8_t BtStack_stop(BtStack_SvcHandle* handle);
 
 /**
  * \brief Returns whether service has started
@@ -119,30 +131,29 @@ void BtStack_stop(BtStack_SvcHandle* handle);
 Bool BtStack_hasStarted(const BtStack_SvcHandle* handle);
 
 /**
- * \brief Attach callback for reception event
- *
- * \param handle Pointer to the handle of the service instance to modify
- * \param callback Callback to execute on reception event
- * \return Returns 0 for success, -1 if callback queue is full, -2 if service running
- */
-int8_t BtStack_attachCallback(BtStack_SvcHandle* handle, BtStack_Callback callback);
-
-/**
- * \brief Removes all reception event callbacks
- *
- * \param handle Pointer to the handle of the service instance to modify
- * \return Returns 0 for success, -1 if service running
- */
-int8_t BtStack_removeCallbacks(BtStack_SvcHandle* handle);
-
-/**
- * \brief Pushes a frame to the back of the send queue
+ * \brief Queues a frame send job
  *
  * \param handle Pointer to the handle of the service instance to send with
  * \param frame Frame to send
  * \returns Number of bytes written, -1 if failure
  */
-int8_t BtStack_push(const BtStack_SvcHandle* handle, const BtStack_Frame* frame);
+int8_t BtStack_queue(const BtStack_SvcHandle* handle, const BtStack_Frame* frame);
+
+/**
+ * \brief Adds an application to listen to receive events of this service
+ *
+ * \param handle Pointer to the handle of the service instance to add listener for
+ * \param appListener Pointer to listener wrapping application callback add
+ */
+void BtStack_addListener(const BtStack_SvcHandle* handle, BtStack_Listener* appListener);
+
+/**
+ * \brief Removes an application from listening to receive events of this service
+ *
+ * \param handle Pointer to the handle of the service instance to remove listener from
+ * \param appListener Pointer to listener wrapping application callback to remove
+ */
+void BtStack_removeListener(const BtStack_SvcHandle* handle, BtStack_Listener* appListener);
 
 /**
  * \brief Prints KFP frames to the console

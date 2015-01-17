@@ -1,6 +1,6 @@
 /**
  * \file BtStack.c
- * \brief Implements btStack service
+ * \brief Implements bluetooth stack service
  * \author George Xian
  * \version 0.1
  * \date 2014-11-30
@@ -17,89 +17,80 @@
 #define DEFAULT_RX_PRIORITY 10			//! Default priority of reception task
 #define DEFAULT_RX_STACK 2048			//! Default stack size of reception task
 #define DEFAULT_BT_BAUD BTBAUD_115200	//! Default baud rate for UART peripheral connected to bluetooth module
+#define DEFAULT_RX_SLEEP 50				//! Number of ticks between frame complete ticks
 
 /**
  * \brief Function reception task executes
+ *
+ * \param handle Service instance handle hosting the task
  */
-void rxFxn(UArg param0, UArg param1);
+void rxFxn(UArg handle, UArg param1);
 
-void BtStack_handleInit(BtStack_SvcHandle* handle, UInt uartPeriphHandle)
+void BtStack_handleInit(BtStack_SvcHandle* handle, UInt uartPeriphIndex)
 {
 	// must be user set
-	handle->uartPeriphHandle = uartPeriphHandle;
+	handle->uartPeriphIndex = uartPeriphIndex;
 
 	// optionally set
 	handle->baud = DEFAULT_BT_BAUD;
 	handle->rxPriority = DEFAULT_RX_PRIORITY;
 	handle->rxStackSize = DEFAULT_RX_STACK;
-
-	// read only
-	handle->numCallbacks = 0;
+	handle->rxSleep = DEFAULT_RX_SLEEP;
 }
 
-void BtStack_start(BtStack_SvcHandle* handle)
+int8_t BtStack_start(BtStack_SvcHandle* handle)
 {
+	// prepare UART driver socket
+	UART_Params params;
+	UART_Params_init(&params);
+	params.baudRate = handle->baud;
+	params.writeDataMode = UART_DATA_BINARY;
+	params.readDataMode = UART_DATA_BINARY;
+	params.readReturnMode = UART_RETURN_FULL;
+	params.readEcho = UART_ECHO_OFF;
+	handle->btSocket = UART_open(handle->uartPeriphIndex, &params);
+	if (handle->btSocket == NULL)
+	{
+		return -1;
+	}
+
+	// setup listener queue
+	handle->recvEventQ = Queue_create(NULL, NULL);
+
+	// setup reception task
 	Task_Params taskParams;
 	Task_Params_init(&taskParams);
 	taskParams.stackSize = handle->rxStackSize;
 	taskParams.priority = handle->rxPriority;
+	taskParams.arg0 = (UArg) &handle;
 	handle->rxTask = Task_create((Task_FuncPtr) rxFxn, &taskParams, NULL);
 	if (handle->rxTask != NULL)
 	{
 		handle->started = TRUE;
+		return 0;
+	}
+	else
+	{
+		return -2;
 	}
 }
 
-void BtStack_stop(BtStack_SvcHandle* handle)
+int8_t BtStack_stop(BtStack_SvcHandle* handle)
 {
 	Task_delete(&handle->rxTask);
+	Queue_delete(&handle->recvEventQ);
+	UART_close(handle->btSocket);
 	handle->started = FALSE;
+
+	return 0;
 }
 
-Bool BtStack_hasStarted(void)
+Bool BtStack_hasStarted(const BtStack_SvcHandle* handle)
 {
-	return hasStart;
+	return handle->started;
 }
 
-Bool BtStack_hasCallback(void)
-{
-	if (rxCallback == NULL)
-	{
-		return FALSE;
-	}
-	else
-	{
-		return TRUE;
-	}
-}
-
-int8_t BtStack_attachCallback(BtStack_Callback callback)
-{
-	if (BtStack_hasCallback())
-	{
-		return -1;
-	}
-	else
-	{
-		rxCallback = callback;
-		return 0;
-	}
-}
-
-int8_t BtStack_removeCallback(void)
-{
-	if (BtStack_hasCallback())
-	{
-		rxCallback = NULL;
-		return 0;
-	}
-	else
-	{
-		return -1;
-	}
-}
-
-int8_t BtStack_push(const BtStack_Frame* frame)
+int8_t BtStack_queue(const BtStack_SvcHandle* handle, const BtStack_Frame* frame)
 {
 	// special character declarations
 	const char escapedEnd[] = {SLIP_ESC, SLIP_ESC_END};	// escaped 0xC0
@@ -138,23 +129,20 @@ int8_t BtStack_push(const BtStack_Frame* frame)
 	sendStream[sentChar] = SLIP_END;
 	sentChar++;
 
-	// prepare UART socket
-	UART_Handle s;
-	UART_Params params;
-	UART_Params_init(&params);
-	params.baudRate = uartBaud;
-	params.writeMode = UART_MODE_BLOCKING;
-	params.writeDataMode = UART_DATA_BINARY;
-	params.readDataMode = UART_DATA_BINARY;
-	params.readReturnMode = UART_RETURN_FULL;
-	params.readEcho = UART_ECHO_OFF;
-	s = UART_open(Board_BT1, &params);
-
 	// write to socket and close once complete
-	int8_t ret = UART_write(s, sendStream, sentChar);
-	UART_close(s);
+	int8_t ret = UART_write(handle->btSocket, sendStream, sentChar);
 
 	return ret;
+}
+
+void BtStack_addListener(const BtStack_SvcHandle* handle, BtStack_Listener* appListener)
+{
+	Queue_put(handle->recvEventQ, &appListener->_elem);
+}
+
+void BtStack_removeListener(const BtStack_SvcHandle* handle, BtStack_Listener* appListener)
+{
+	Queue_remove(&appListener->_elem);
 }
 
 void BtStack_framePrint(const BtStack_Frame* frame, KfpPrintFormat format)
@@ -181,16 +169,80 @@ void BtStack_framePrint(const BtStack_Frame* frame, KfpPrintFormat format)
 	System_flush();
 }
 
-void rxFxn(UArg param0, UArg param1)
+void rxFxn(UArg handle, UArg param1)
 {
+	BtStack_SvcHandle* btStackHandle = (BtStack_SvcHandle*) handle;
+
+	bool inFrame = FALSE;
+	uint8_t frIndex = 0;
+	BtStack_Frame recvFrame;
+
 	while(TRUE)
 	{
-		//TODO:
-	}
-}
+		char rxBuffer[1];
+		char escRxBuffer[1];
+		UART_read(btStackHandle->btSocket, rxBuffer, 1);
+		switch(rxBuffer[0])
+		{
+		case(SLIP_END):
+				if (inFrame)
+				{
+					if (frIndex == (KFP_FRAME_SIZE-2))
+					{
+						// end of frame, signal applications
+						while(!Queue_empty(btStackHandle->recvEventQ))
+						{
+							BtStack_Listener* appListener = Queue_dequeue(btStackHandle->recvEventQ);
+							appListener->callback(&recvFrame);
+						}
+					}
 
-void onReceive(UART_Handle handle, char* received)
-{
-	strncpy(tempRx, received, 1);
-	Semaphore_post(rxSem);
+					// reset states, ignore corrupt frames
+					frIndex = 0;
+					inFrame = FALSE;
+					Task_sleep(btStackHandle->rxSleep);
+					break;
+				}
+				else
+				{
+					// start a new frame
+					inFrame = TRUE;
+					frIndex = 0;
+					break;
+				}
+		case(SLIP_ESC):
+				if (inFrame)
+				{
+					UART_read(btStackHandle->btSocket, escRxBuffer, 1);
+					switch(escRxBuffer[0])
+					{
+					case(SLIP_ESC_END):
+							recvFrame.b8[frIndex] = SLIP_END;
+							frIndex++;
+							break;
+					case(SLIP_ESC_ESC):
+							recvFrame.b8[frIndex] = SLIP_ESC;
+							frIndex++;
+							break;
+					default:
+							break;	// invalid escape character
+					}
+				}
+				else
+				{
+					break;	// ignore stray characters
+				}
+		default:
+				if (inFrame)
+				{
+					// standard character receive
+					recvFrame.b8[frIndex] = rxBuffer[0];
+					frIndex++;
+				}
+				else
+				{
+					break;	// ignore stray characters
+				}
+		}
+	}
 }
