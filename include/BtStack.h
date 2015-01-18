@@ -85,21 +85,21 @@ typedef struct
  */
 typedef struct
 {
+	unsigned int uartPeriphIndex;	//! UART peripheral connected to bluetooth module
+	BtBaud baud;					//! Baud for UART peripheral
+
+	UART_Handle btSocket;			//! Socket to UART driver
+	unsigned int rxSleep;			//! Number of ticks to sleep after complete frame
+	Task_Handle rxTask;				//! Handle to the reception task
+	int rxPriority;					//! Reception task priority
+	unsigned int rxStackSize;		//! Stack size allocation to reception task
+	void (*rxFxn)(UArg, UArg);		//! Function reception task executes
+
+	Queue_Handle recvEventQ;		//! Applications bound to this service
+
+	Bool started;					//! Service status
+
 	char svcName[BTSTACK_SVCNAMELEN];	//! String identifier for debug and console
-
-	UInt uartPeriphIndex;		//! UART peripheral connected to bluetooth module
-	BtBaud baud;				//! Baud for UART peripheral
-
-	Bool started;				//! Service status
-	uint8_t rxSleep;			//! Number of ticks to sleep after complete frame
-
-	UART_Handle btSocket;		//! Socket to UART driver
-	Task_Handle rxTask;			//! Handle to the reception task
-	int8_t rxPriority;			//! Reception task priority
-	uint16_t rxStackSize;		//! Stack size allocation to reception task
-	void (*rxFxn)(UArg, UArg);	//! Function reception task executes
-
-	Queue_Handle recvEventQ;	//! Applications bound to this service
 } BtStack_SvcHandle;
 
 /**
@@ -110,7 +110,7 @@ typedef struct
  * \param name String name for service instance (8 char limit)
  * \param baud Baud rate to use on UART peripheral connect to bluetooth
  */
-void BtStack_handleInit(BtStack_SvcHandle* handle, char* name, UInt uartPeriphIndex, BtBaud baud);
+void BtStack_handleInit(BtStack_SvcHandle* handle, char* name, unsigned int uartPeriphIndex, BtBaud baud);
 
 /**
  * \brief Starts bluetooth stack service
@@ -118,7 +118,7 @@ void BtStack_handleInit(BtStack_SvcHandle* handle, char* name, UInt uartPeriphIn
  * \param handle Pointer to the handle containing configuration for service
  * \return Returns 0 for success, -1 for task error
  */
-int8_t BtStack_start(BtStack_SvcHandle* handle);
+int BtStack_start(BtStack_SvcHandle* handle);
 
 /**
  * \brief Stops bluetooth stack service
@@ -126,7 +126,7 @@ int8_t BtStack_start(BtStack_SvcHandle* handle);
  * \param handle Pointer to the handle of the service instance to be stopped
  * \return Returns 0 for success, -1 for failure
  */
-int8_t BtStack_stop(BtStack_SvcHandle* handle);
+int BtStack_stop(BtStack_SvcHandle* handle);
 
 /**
  * \brief Returns whether service has started
@@ -143,7 +143,7 @@ Bool BtStack_hasStarted(const BtStack_SvcHandle* handle);
  * \param frame Frame to send
  * \returns Number of bytes written, -1 if failure
  */
-int8_t BtStack_queue(const BtStack_SvcHandle* handle, const BtStack_Frame* frame);
+int BtStack_queue(const BtStack_SvcHandle* handle, const BtStack_Frame* frame);
 
 /**
  * \brief Initializes bluetooth stack service listeners for applications

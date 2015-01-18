@@ -26,12 +26,12 @@
  */
 void rxFxn(UArg handle, UArg param1);
 
-void BtStack_handleInit(BtStack_SvcHandle* handle, char* name, UInt uartPeriphIndex, BtBaud baud)
+void BtStack_handleInit(BtStack_SvcHandle* handle, char* name, unsigned int uartPeriphIndex, BtBaud baud)
 {
 	// must be user set
 	handle->uartPeriphIndex = uartPeriphIndex;
 	handle->baud = baud;
-	strcpy(handle->svcName, name);
+	strncpy(handle->svcName, name, 8);
 
 	// optionally set
 	handle->rxPriority = DEFAULT_RX_PRIORITY;
@@ -39,7 +39,7 @@ void BtStack_handleInit(BtStack_SvcHandle* handle, char* name, UInt uartPeriphIn
 	handle->rxSleep = DEFAULT_RX_SLEEP;
 }
 
-int8_t BtStack_start(BtStack_SvcHandle* handle)
+int BtStack_start(BtStack_SvcHandle* handle)
 {
 	// setup listener queue
 	handle->recvEventQ = Queue_create(NULL, NULL);
@@ -50,7 +50,7 @@ int8_t BtStack_start(BtStack_SvcHandle* handle)
 	taskParams.instance->name = handle->svcName;
 	taskParams.stackSize = handle->rxStackSize;
 	taskParams.priority = handle->rxPriority;
-	taskParams.arg0 = (UArg) &handle;
+	taskParams.arg0 = (UArg) handle;
 	handle->rxTask = Task_create((Task_FuncPtr) rxFxn, &taskParams, NULL);
 	if (!handle->rxTask)
 	{
@@ -63,7 +63,7 @@ int8_t BtStack_start(BtStack_SvcHandle* handle)
 	}
 }
 
-int8_t BtStack_stop(BtStack_SvcHandle* handle)
+int BtStack_stop(BtStack_SvcHandle* handle)
 {
 	UART_readCancel(handle->btSocket);
 	UART_close(handle->btSocket);
@@ -79,7 +79,7 @@ Bool BtStack_hasStarted(const BtStack_SvcHandle* handle)
 	return handle->started;
 }
 
-int8_t BtStack_queue(const BtStack_SvcHandle* handle, const BtStack_Frame* frame)
+int BtStack_queue(const BtStack_SvcHandle* handle, const BtStack_Frame* frame)
 {
 	// special character declarations
 	const char escapedEnd[] = {SLIP_ESC, SLIP_ESC_END};	// escaped 0xC0
@@ -153,11 +153,11 @@ void BtStack_framePrint(const BtStack_Frame* frame, KfpPrintFormat format)
 	{
 		if (format == KFPPRINTFORMAT_ASCII)
 		{
-			System_printf("%c", frame->payload.b8[i]);
+			System_printf(" %c ", frame->payload.b8[i]);
 		}
 		else if (format == KFPPRINTFORMAT_HEX)
 		{
-			System_printf("%x", frame->payload.b8[i]);
+			System_printf(" %x", frame->payload.b8[i]);
 		}
 	}
 	System_printf("\n");
@@ -189,11 +189,8 @@ void rxFxn(UArg handle, UArg param1)
 		char rxBuffer[1];
 		char escRxBuffer[1];	// read characters following escape into different buffer
 
-		//TODO: Remove, for debug only
-		System_printf("Reading UART\n");
-		System_flush();
-
 		UART_read(btStackHandle->btSocket, rxBuffer, 1);
+
 		switch(rxBuffer[0])
 		{
 		case(SLIP_END):
@@ -253,10 +250,6 @@ void rxFxn(UArg handle, UArg param1)
 		default:
 				if (inFrame)
 				{
-					//TODO: Remove, for debug only
-					System_printf("Received: %x\n", rxBuffer[0]);
-					System_flush();
-
 					// standard character receive
 					recvFrame.b8[frIndex] = rxBuffer[0];
 					frIndex++;
