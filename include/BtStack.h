@@ -23,7 +23,7 @@
 #define SLIP_ESC_ESC 0xDD	//! Used to send 0xDB when preceded by ESC character
 
 typedef enum {KFPPRINTFORMAT_ASCII, KFPPRINTFORMAT_HEX} KfpPrintFormat;
-typedef enum {BTBAUD_9600=9600, BTBAUD_19200=19200, BTBAUD_38400=38400, BTBAUD_57600=57600, BTBAUD_115200=115200} BtBaud;
+typedef enum {BTBAUD_4800=4800, BTBAUD_9600=9600, BTBAUD_19200=19200, BTBAUD_38400=38400, BTBAUD_57600=57600, BTBAUD_115200=115200} BtBaud;
 
 /**
  * \struct BtStack_Id
@@ -68,14 +68,14 @@ typedef union
 typedef void (*BtStack_Callback)(const BtStack_Frame*);
 
 /**
- * \struct BtStack_Listener
- * \brief Wraps application callbacks for use with queue
+ * \struct BtStack_OnRecvListener
+ * \brief Binder for application callbacks to receive events of this service
  */
 typedef struct
 {
 	Queue_Elem _elem;
-	BtStack_Callback callback;
-} BtStack_Listener;
+	BtStack_Callback callback;	//! Callback to execute on desired event
+} BtStack_OnRecvListener;
 
 /**
  * \struct BtStack_SvcHandle
@@ -103,14 +103,15 @@ typedef struct
  *
  * \param handle Pointer to handle
  * \param uartPeriphIndex UART peripheral connected to bluetooth to use
+ * \param baud Baud rate to use on UART peripheral connect to bluetooth
  */
-void BtStack_handleInit(BtStack_SvcHandle* handle, UInt uartPeriphIndex);
+void BtStack_handleInit(BtStack_SvcHandle* handle, UInt uartPeriphIndex, BtBaud baud);
 
 /**
  * \brief Starts bluetooth stack service
  *
  * \param handle Pointer to the handle containing configuration for service
- * \return Returns 0 for success, -1 if UART socket failed to open, -2 if reception task failed to start
+ * \return Returns 0 for success, -1 for task error
  */
 int8_t BtStack_start(BtStack_SvcHandle* handle);
 
@@ -140,20 +141,28 @@ Bool BtStack_hasStarted(const BtStack_SvcHandle* handle);
 int8_t BtStack_queue(const BtStack_SvcHandle* handle, const BtStack_Frame* frame);
 
 /**
- * \brief Adds an application to listen to receive events of this service
+ * \brief Initializes bluetooth stack service listeners for applications
  *
- * \param handle Pointer to the handle of the service instance to add listener for
- * \param appListener Pointer to listener wrapping application callback add
+ * \param appListener Pointer to the listener to initialize
+ * \oaram callback Application callback to execute on event
  */
-void BtStack_addListener(const BtStack_SvcHandle* handle, BtStack_Listener* appListener);
+void BtStack_onRecvListenerInit(BtStack_OnRecvListener* appListener, BtStack_Callback callback);
 
 /**
- * \brief Removes an application from listening to receive events of this service
+ * \brief Make application listener listen to on receive events of this service
  *
- * \param handle Pointer to the handle of the service instance to remove listener from
- * \param appListener Pointer to listener wrapping application callback to remove
+ * \param handle Pointer to the handle of the service instance to listen to
+ * \param appListener Pointer to listener to register receive events
  */
-void BtStack_removeListener(const BtStack_SvcHandle* handle, BtStack_Listener* appListener);
+void BtStack_registerOnRecv(const BtStack_SvcHandle* handle, BtStack_OnRecvListener* appListener);
+
+/**
+ * \brief Stop application listener from listening to on receive events of this service
+ *
+ * \param handle Pointer to the handle of the service instance to stop listening
+ * \param appListener Pointer to listener to remove receive events
+ */
+void BtStack_removeOnRecv(const BtStack_SvcHandle* handle, BtStack_OnRecvListener* appListener);
 
 /**
  * \brief Prints KFP frames to the console

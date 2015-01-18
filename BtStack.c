@@ -17,7 +17,7 @@
 #define DEFAULT_RX_PRIORITY 10			//! Default priority of reception task
 #define DEFAULT_RX_STACK 2048			//! Default stack size of reception task
 #define DEFAULT_BT_BAUD BTBAUD_115200	//! Default baud rate for UART peripheral connected to bluetooth module
-#define DEFAULT_RX_SLEEP 50				//! Number of ticks between frame complete ticks
+#define DEFAULT_RX_SLEEP 50				//! Default number of ticks between frame completions to sleep
 
 /**
  * \brief Function reception task executes
@@ -26,13 +26,13 @@
  */
 void rxFxn(UArg handle, UArg param1);
 
-void BtStack_handleInit(BtStack_SvcHandle* handle, UInt uartPeriphIndex)
+void BtStack_handleInit(BtStack_SvcHandle* handle, UInt uartPeriphIndex, BtBaud baud)
 {
 	// must be user set
 	handle->uartPeriphIndex = uartPeriphIndex;
+	handle->baud = baud;
 
 	// optionally set
-	handle->baud = DEFAULT_BT_BAUD;
 	handle->rxPriority = DEFAULT_RX_PRIORITY;
 	handle->rxStackSize = DEFAULT_RX_STACK;
 	handle->rxSleep = DEFAULT_RX_SLEEP;
@@ -40,20 +40,6 @@ void BtStack_handleInit(BtStack_SvcHandle* handle, UInt uartPeriphIndex)
 
 int8_t BtStack_start(BtStack_SvcHandle* handle)
 {
-	// prepare UART driver socket
-	UART_Params params;
-	UART_Params_init(&params);
-	params.baudRate = handle->baud;
-	params.writeDataMode = UART_DATA_BINARY;
-	params.readDataMode = UART_DATA_BINARY;
-	params.readReturnMode = UART_RETURN_FULL;
-	params.readEcho = UART_ECHO_OFF;
-	handle->btSocket = UART_open(handle->uartPeriphIndex, &params);
-	if (handle->btSocket == NULL)
-	{
-		return -1;
-	}
-
 	// setup listener queue
 	handle->recvEventQ = Queue_create(NULL, NULL);
 
@@ -64,22 +50,23 @@ int8_t BtStack_start(BtStack_SvcHandle* handle)
 	taskParams.priority = handle->rxPriority;
 	taskParams.arg0 = (UArg) &handle;
 	handle->rxTask = Task_create((Task_FuncPtr) rxFxn, &taskParams, NULL);
-	if (handle->rxTask != NULL)
+	if (!handle->rxTask)
 	{
-		handle->started = TRUE;
-		return 0;
+		return -1;
 	}
 	else
 	{
-		return -2;
+		handle->started = TRUE;
+		return 0;
 	}
 }
 
 int8_t BtStack_stop(BtStack_SvcHandle* handle)
 {
-	Task_delete(&handle->rxTask);
-	Queue_delete(&handle->recvEventQ);
+	UART_readCancel(handle->btSocket);
 	UART_close(handle->btSocket);
+	Queue_delete(&(handle->recvEventQ));
+	Task_delete(&(handle->rxTask));
 	handle->started = FALSE;
 
 	return 0;
@@ -135,14 +122,19 @@ int8_t BtStack_queue(const BtStack_SvcHandle* handle, const BtStack_Frame* frame
 	return ret;
 }
 
-void BtStack_addListener(const BtStack_SvcHandle* handle, BtStack_Listener* appListener)
+void BtStack_onRecvListenerInit(BtStack_OnRecvListener* appListener, BtStack_Callback callback)
 {
-	Queue_put(handle->recvEventQ, &appListener->_elem);
+	appListener->callback = callback;
 }
 
-void BtStack_removeListener(const BtStack_SvcHandle* handle, BtStack_Listener* appListener)
+void BtStack_registerOnRecv(const BtStack_SvcHandle* handle, BtStack_OnRecvListener* appListener)
 {
-	Queue_remove(&appListener->_elem);
+	Queue_put(handle->recvEventQ, &(appListener->_elem));
+}
+
+void BtStack_removeOnRecv(const BtStack_SvcHandle* handle, BtStack_OnRecvListener* appListener)
+{
+	Queue_remove(&(appListener->_elem));
 }
 
 void BtStack_framePrint(const BtStack_Frame* frame, KfpPrintFormat format)
@@ -166,13 +158,26 @@ void BtStack_framePrint(const BtStack_Frame* frame, KfpPrintFormat format)
 			System_printf("%x", frame->payload.b8[i]);
 		}
 	}
+	System_printf("\n");
 	System_flush();
 }
 
 void rxFxn(UArg handle, UArg param1)
 {
+	// casting service handle
 	BtStack_SvcHandle* btStackHandle = (BtStack_SvcHandle*) handle;
 
+	// create UART socket
+	UART_Params params;
+	UART_Params_init(&params);
+	params.baudRate = btStackHandle->baud;
+	params.writeDataMode = UART_DATA_BINARY;
+	params.readDataMode = UART_DATA_BINARY;
+	params.readReturnMode = UART_RETURN_FULL;
+	params.readEcho = UART_ECHO_OFF;
+	btStackHandle->btSocket = UART_open(btStackHandle->uartPeriphIndex, &params);
+
+	// state variables for frame processing
 	bool inFrame = FALSE;
 	uint8_t frIndex = 0;
 	BtStack_Frame recvFrame;
@@ -180,7 +185,12 @@ void rxFxn(UArg handle, UArg param1)
 	while(TRUE)
 	{
 		char rxBuffer[1];
-		char escRxBuffer[1];
+		char escRxBuffer[1];	// read characters following escape into different buffer
+
+		//TODO: Remove, for debug only
+		System_printf("Reading UART\n");
+		System_flush();
+
 		UART_read(btStackHandle->btSocket, rxBuffer, 1);
 		switch(rxBuffer[0])
 		{
@@ -189,11 +199,17 @@ void rxFxn(UArg handle, UArg param1)
 				{
 					if (frIndex == (KFP_FRAME_SIZE-2))
 					{
+						//TODO: Remove, for debug only
+						BtStack_framePrint((const BtStack_Frame*) &recvFrame, KFPPRINTFORMAT_HEX);
+
 						// end of frame, signal applications
 						while(!Queue_empty(btStackHandle->recvEventQ))
 						{
-							BtStack_Listener* appListener = Queue_dequeue(btStackHandle->recvEventQ);
-							appListener->callback(&recvFrame);
+							BtStack_OnRecvListener* appListener = Queue_dequeue(btStackHandle->recvEventQ);
+							if (appListener->callback != NULL)
+							{
+								appListener->callback(&recvFrame);
+							}
 						}
 					}
 
@@ -235,6 +251,10 @@ void rxFxn(UArg handle, UArg param1)
 		default:
 				if (inFrame)
 				{
+					//TODO: Remove, for debug only
+					System_printf("Received: %x\n", rxBuffer[0]);
+					System_flush();
+
 					// standard character receive
 					recvFrame.b8[frIndex] = rxBuffer[0];
 					frIndex++;
