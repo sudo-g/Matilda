@@ -26,11 +26,12 @@
  */
 void rxFxn(UArg handle, UArg param1);
 
-void BtStack_handleInit(BtStack_SvcHandle* handle, UInt uartPeriphIndex, BtBaud baud)
+void BtStack_handleInit(BtStack_SvcHandle* handle, char* name, UInt uartPeriphIndex, BtBaud baud)
 {
 	// must be user set
 	handle->uartPeriphIndex = uartPeriphIndex;
 	handle->baud = baud;
+	strcpy(handle->svcName, name);
 
 	// optionally set
 	handle->rxPriority = DEFAULT_RX_PRIORITY;
@@ -46,6 +47,7 @@ int8_t BtStack_start(BtStack_SvcHandle* handle)
 	// setup reception task
 	Task_Params taskParams;
 	Task_Params_init(&taskParams);
+	taskParams.instance->name = handle->svcName;
 	taskParams.stackSize = handle->rxStackSize;
 	taskParams.priority = handle->rxPriority;
 	taskParams.arg0 = (UArg) &handle;

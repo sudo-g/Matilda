@@ -22,6 +22,8 @@
 #define SLIP_ESC_END 0xDC	//! Used to send 0xC0 when preceded by ESC character
 #define SLIP_ESC_ESC 0xDD	//! Used to send 0xDB when preceded by ESC character
 
+#define BTSTACK_SVCNAMELEN 8
+
 typedef enum {KFPPRINTFORMAT_ASCII, KFPPRINTFORMAT_HEX} KfpPrintFormat;
 typedef enum {BTBAUD_4800=4800, BTBAUD_9600=9600, BTBAUD_19200=19200, BTBAUD_38400=38400, BTBAUD_57600=57600, BTBAUD_115200=115200} BtBaud;
 
@@ -83,6 +85,8 @@ typedef struct
  */
 typedef struct
 {
+	char svcName[BTSTACK_SVCNAMELEN];	//! String identifier for debug and console
+
 	UInt uartPeriphIndex;		//! UART peripheral connected to bluetooth module
 	BtBaud baud;				//! Baud for UART peripheral
 
@@ -103,9 +107,10 @@ typedef struct
  *
  * \param handle Pointer to handle
  * \param uartPeriphIndex UART peripheral connected to bluetooth to use
+ * \param name String name for service instance (8 char limit)
  * \param baud Baud rate to use on UART peripheral connect to bluetooth
  */
-void BtStack_handleInit(BtStack_SvcHandle* handle, UInt uartPeriphIndex, BtBaud baud);
+void BtStack_handleInit(BtStack_SvcHandle* handle, char* name, UInt uartPeriphIndex, BtBaud baud);
 
 /**
  * \brief Starts bluetooth stack service
