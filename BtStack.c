@@ -14,10 +14,9 @@
 #include <string.h>
 #include "Board.h"
 
-#define DEFAULT_RX_PRIORITY 10			//! Default priority of reception task
-#define DEFAULT_RX_STACK 2048			//! Default stack size of reception task
-#define DEFAULT_BT_BAUD BTBAUD_115200	//! Default baud rate for UART peripheral connected to bluetooth module
-#define DEFAULT_RX_SLEEP 50				//! Default number of ticks between frame completions to sleep
+#define DEFAULT_RX_PRIORITY 10          //! Default priority of reception task
+#define DEFAULT_RX_STACK 2048           //! Default stack size of reception task
+#define DEFAULT_RX_SLEEP 50             //! Default number of ticks between frame completions to sleep
 
 /**
  * \brief Function reception task executes
@@ -82,8 +81,8 @@ Bool BtStack_hasStarted(const BtStack_SvcHandle* handle)
 int BtStack_queue(const BtStack_SvcHandle* handle, const BtStack_Frame* frame)
 {
 	// special character declarations
-	const char escapedEnd[] = {SLIP_ESC, SLIP_ESC_END};	// escaped 0xC0
-	const char escapedEsc[] = {SLIP_ESC, SLIP_ESC_ESC};	// escaped 0xDB
+	const char escapedEnd[] = {SLIP_ESC, SLIP_ESC_END}; // escaped 0xC0
+	const char escapedEsc[] = {SLIP_ESC, SLIP_ESC_ESC}; // escaped 0xDB
 
 	char sendStream[KFP_WORST_SIZE];
 	uint8_t sentChar = 0;
@@ -187,7 +186,7 @@ void rxFxn(UArg handle, UArg param1)
 	while(TRUE)
 	{
 		char rxBuffer[1];
-		char escRxBuffer[1];	// read characters following escape into different buffer
+		char escRxBuffer[1];    // read characters following escape into different buffer
 
 		UART_read(btStackHandle->btSocket, rxBuffer, 1);
 
@@ -198,9 +197,6 @@ void rxFxn(UArg handle, UArg param1)
 				{
 					if (frIndex == (KFP_FRAME_SIZE-2))
 					{
-						//TODO: Remove, for debug only
-						BtStack_framePrint((const BtStack_Frame*) &recvFrame, KFPPRINTFORMAT_HEX);
-
 						// end of frame, signal applications
 						while(!Queue_empty(btStackHandle->recvEventQ))
 						{
@@ -240,12 +236,12 @@ void rxFxn(UArg handle, UArg param1)
 							frIndex++;
 							break;
 					default:
-							break;	// invalid escape character
+							break;   // invalid escape character
 					}
 				}
 				else
 				{
-					break;	// ignore stray characters
+					break;           // ignore stray characters
 				}
 		default:
 				if (inFrame)
@@ -256,7 +252,7 @@ void rxFxn(UArg handle, UArg param1)
 				}
 				else
 				{
-					break;	// ignore stray characters
+					break;           // ignore stray characters
 				}
 		}
 	}

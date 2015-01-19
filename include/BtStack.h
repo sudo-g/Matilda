@@ -14,13 +14,13 @@
 #include <ti/sysbios/BIOS.h>
 #include <ti/drivers/UART.h>
 
-#define KFP_FRAME_SIZE 14	//! No. of data bytes in Killalot frame protocol
-#define KFP_WORST_SIZE 26	//! Maximum frame size if escape characters are used
+#define KFP_FRAME_SIZE 14   //! No. of data bytes in Killalot frame protocol
+#define KFP_WORST_SIZE 26   //! Maximum frame size if escape characters are used
 
-#define SLIP_END 0xC0		//! SLIP END character
-#define SLIP_ESC 0xDB		//! SLIP ESC character
-#define SLIP_ESC_END 0xDC	//! Used to send 0xC0 when preceded by ESC character
-#define SLIP_ESC_ESC 0xDD	//! Used to send 0xDB when preceded by ESC character
+#define SLIP_END 0xC0       //! SLIP END character
+#define SLIP_ESC 0xDB       //! SLIP ESC character
+#define SLIP_ESC_END 0xDC   //! Used to send 0xC0 when preceded by ESC character
+#define SLIP_ESC_ESC 0xDD   //! Used to send 0xDB when preceded by ESC character
 
 #define BTSTACK_SVCNAMELEN 8
 
@@ -33,9 +33,9 @@ typedef enum {BTBAUD_4800=4800, BTBAUD_9600=9600, BTBAUD_19200=19200, BTBAUD_384
  */
 typedef union
 {
-	uint8_t b8[4];			//! bytewise
-	uint16_t b16[2];		//! thumb wordwise
-	uint32_t b32;			//! ARM wordwise
+	uint8_t b8[4];          //! bytewise
+	uint16_t b16[2];        //! thumb wordwise
+	uint32_t b32;           //! ARM wordwise
 } BtStack_Id;
 
 /**
@@ -44,9 +44,9 @@ typedef union
  */
 typedef union
 {
-	uint8_t b8[4];			//! bytewise
-	uint16_t b16[2];		//! thumb wordwise
-	uint32_t b32;			//! ARM wordwise
+	uint8_t b8[4];          //! bytewise
+	uint16_t b16[2];        //! thumb wordwise
+	uint32_t b32;           //! ARM wordwise
 } BtStack_Data;
 
 /**
@@ -57,10 +57,10 @@ typedef union
 {
 	struct
 	{
-		BtStack_Id id;				//! 4 bytes ID
-		BtStack_Data payload;		//! 8 bytes payload
+		BtStack_Id id;            //! 4 bytes ID
+		BtStack_Data payload;     //! 8 bytes payload
 	};
-	uint8_t b8[KFP_FRAME_SIZE-2];	//! bytestream access
+	uint8_t b8[KFP_FRAME_SIZE-2]; //! bytestream access
 } BtStack_Frame;
 
 /**
@@ -85,21 +85,21 @@ typedef struct
  */
 typedef struct
 {
-	unsigned int uartPeriphIndex;	//! UART peripheral connected to bluetooth module
-	BtBaud baud;					//! Baud for UART peripheral
+	unsigned int uartPeriphIndex;   //! UART peripheral connected to bluetooth module
+	BtBaud baud;                    //! Baud for UART peripheral
 
-	UART_Handle btSocket;			//! Socket to UART driver
-	unsigned int rxSleep;			//! Number of ticks to sleep after complete frame
-	Task_Handle rxTask;				//! Handle to the reception task
-	int rxPriority;					//! Reception task priority
-	unsigned int rxStackSize;		//! Stack size allocation to reception task
-	void (*rxFxn)(UArg, UArg);		//! Function reception task executes
+	UART_Handle btSocket;           //! Socket to UART driver
+	unsigned int rxSleep;           //! Number of ticks to sleep after complete frame
+	Task_Handle rxTask;             //! Handle to the reception task
+	int rxPriority;                 //! Reception task priority
+	unsigned int rxStackSize;       //! Stack size allocation to reception task
+	void (*rxFxn)(UArg, UArg);      //! Function reception task executes
 
-	Queue_Handle recvEventQ;		//! Applications bound to this service
+	Queue_Handle recvEventQ;        //! Applications bound to this service
 
-	Bool started;					//! Service status
+	Bool started;                   //! Service status
 
-	char svcName[BTSTACK_SVCNAMELEN];	//! String identifier for debug and console
+	char svcName[BTSTACK_SVCNAMELEN];   //! String identifier for debug and console
 } BtStack_SvcHandle;
 
 /**
