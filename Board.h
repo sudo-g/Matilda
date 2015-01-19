@@ -70,6 +70,7 @@ extern "C" {
 
 #define Board_UART0                 EK_TM4C123GXL_UART0
 #define Board_BT1					EK_TM4C123GXL_UART1
+#define Board_BT2					EK_TM4C123GXL_UART3
 
 #define Board_WATCHDOG0             EK_TM4C123GXL_WATCHDOG0
 

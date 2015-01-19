@@ -1,6 +1,6 @@
 /**
  * \file BtStack.c
- * \brief Implements btStack service
+ * \brief Implements bluetooth stack service
  * \author George Xian
  * \version 0.1
  * \date 2014-11-30
@@ -9,131 +9,80 @@
 #include "BtStack.h"
 
 #include <xdc/runtime/Error.h>
-#include <ti/sysbios/BIOS.h>
-#include <ti/sysbios/knl/Task.h>
-#include <ti/sysbios/knl/Semaphore.h>
+
 #include <xdc/runtime/System.h>
 #include <string.h>
 #include "Board.h"
 
-#define DEFAULT_RX_PRIORITY 10			//! Default priority of reception task
-#define DEFAULT_RX_STACK 2048			//! Default stack size of reception task
-#define DEFAULT_UART_BAUD 115200		//! Default baud rate for UART
-
-static Bool hasStart = FALSE;					//! Task started status
-static Task_Handle rxTask = NULL;				//! Handle to the reception task
-static int8_t rxPriority = DEFAULT_RX_PRIORITY;	//! Priority of reception task
-static uint16_t rxStackSize = DEFAULT_RX_STACK;	//! Stack size of reception task
-static BtStack_Callback rxCallback = NULL;		//! Function to call on receive event
-static Semaphore_Handle rxSem = NULL;			//! Return CPU time from reception task
-static char tempRx[1];							//! Reception buffer
-
-static uint32_t uartBaud = DEFAULT_UART_BAUD;	//! Baud rate to initiate UART peripheral to
+#define DEFAULT_RX_PRIORITY 10          //! Default priority of reception task
+#define DEFAULT_RX_STACK 2048           //! Default stack size of reception task
+#define DEFAULT_RX_SLEEP 50             //! Default number of ticks between frame completions to sleep
 
 /**
- * \brief Function executed by the reception task
- */
-void rxFxn(UArg unused0, UArg unused1);
-
-/**
- * \brief Callback on an on receive event
+ * \brief Function reception task executes
  *
- * \param handle UartHandle concerned with the reception
- * \param received Character received
+ * \param handle Service instance handle hosting the task
  */
-void onReceive(UART_Handle handle, char* received);
+void rxFxn(UArg handle, UArg param1);
 
-int8_t BtStack_start(void)
+void BtStack_handleInit(BtStack_SvcHandle* handle, char* name, unsigned int uartPeriphIndex, BtBaud baud)
 {
-	if (rxTask != NULL)
+	// must be user set
+	handle->uartPeriphIndex = uartPeriphIndex;
+	handle->baud = baud;
+	strncpy(handle->svcName, name, 8);
+
+	// optionally set
+	handle->rxPriority = DEFAULT_RX_PRIORITY;
+	handle->rxStackSize = DEFAULT_RX_STACK;
+	handle->rxSleep = DEFAULT_RX_SLEEP;
+}
+
+int BtStack_start(BtStack_SvcHandle* handle)
+{
+	// setup listener queue
+	handle->recvEventQ = Queue_create(NULL, NULL);
+
+	// setup reception task
+	Task_Params taskParams;
+	Task_Params_init(&taskParams);
+	taskParams.instance->name = handle->svcName;
+	taskParams.stackSize = handle->rxStackSize;
+	taskParams.priority = handle->rxPriority;
+	taskParams.arg0 = (UArg) handle;
+	handle->rxTask = Task_create((Task_FuncPtr) rxFxn, &taskParams, NULL);
+	if (!handle->rxTask)
 	{
-		// service already started
 		return -1;
-	}
-
-	// generic error block
-	Error_Block eb;
-	Error_init(&eb);
-
-	// create receive semaphore
-	rxSem = Semaphore_create(1, NULL, &eb);
-
-	// creating the task
-	Task_Params params;
-	Task_Params_init(&params);
-	params.instance->name = "btStack::rx";
-	params.priority = rxPriority;
-	params.stackSize = rxStackSize;
-
-	rxTask = Task_create((Task_FuncPtr) rxFxn, &params, &eb);
-	if (rxTask == NULL)
-	{
-		return -2;
 	}
 	else
 	{
-		hasStart = TRUE;
+		handle->started = TRUE;
 		return 0;
 	}
 }
 
-int8_t BtStack_stop(void)
+int BtStack_stop(BtStack_SvcHandle* handle)
 {
-	Task_delete(&rxTask);
-	rxSem = NULL;
-	hasStart = FALSE;
+	UART_readCancel(handle->btSocket);
+	UART_close(handle->btSocket);
+	Queue_delete(&(handle->recvEventQ));
+	Task_delete(&(handle->rxTask));
+	handle->started = FALSE;
 
 	return 0;
 }
 
-Bool BtStack_hasStarted(void)
+Bool BtStack_hasStarted(const BtStack_SvcHandle* handle)
 {
-	return hasStart;
+	return handle->started;
 }
 
-Bool BtStack_hasCallback(void)
-{
-	if (rxCallback == NULL)
-	{
-		return FALSE;
-	}
-	else
-	{
-		return TRUE;
-	}
-}
-
-int8_t BtStack_attachCallback(BtStack_Callback callback)
-{
-	if (BtStack_hasCallback())
-	{
-		return -1;
-	}
-	else
-	{
-		rxCallback = callback;
-		return 0;
-	}
-}
-
-int8_t BtStack_removeCallback(void)
-{
-	if (BtStack_hasCallback())
-	{
-		rxCallback = NULL;
-		return 0;
-	}
-	else
-	{
-		return -1;
-	}
-}
-
-int8_t BtStack_push(const BtStack_Frame* frame)
+int BtStack_queue(const BtStack_SvcHandle* handle, const BtStack_Frame* frame)
 {
 	// special character declarations
-	const char escapedEnd[] = {SLIP_ESC, SLIP_ESC_END};	// escaped 0xC0
-	const char escapedEsc[] = {SLIP_ESC, SLIP_ESC_ESC};	// escaped 0xDB
+	const char escapedEnd[] = {SLIP_ESC, SLIP_ESC_END}; // escaped 0xC0
+	const char escapedEsc[] = {SLIP_ESC, SLIP_ESC_ESC}; // escaped 0xDB
 
 	char sendStream[KFP_WORST_SIZE];
 	uint8_t sentChar = 0;
@@ -168,23 +117,25 @@ int8_t BtStack_push(const BtStack_Frame* frame)
 	sendStream[sentChar] = SLIP_END;
 	sentChar++;
 
-	// prepare UART socket
-	UART_Handle s;
-	UART_Params params;
-	UART_Params_init(&params);
-	params.baudRate = uartBaud;
-	params.writeMode = UART_MODE_BLOCKING;
-	params.writeDataMode = UART_DATA_BINARY;
-	params.readDataMode = UART_DATA_BINARY;
-	params.readReturnMode = UART_RETURN_FULL;
-	params.readEcho = UART_ECHO_OFF;
-	s = UART_open(Board_BT1, &params);
-
 	// write to socket and close once complete
-	int8_t ret = UART_write(s, sendStream, sentChar);
-	UART_close(s);
+	int8_t ret = UART_write(handle->btSocket, sendStream, sentChar);
 
 	return ret;
+}
+
+void BtStack_onRecvListenerInit(BtStack_OnRecvListener* appListener, BtStack_Callback callback)
+{
+	appListener->callback = callback;
+}
+
+void BtStack_registerOnRecv(const BtStack_SvcHandle* handle, BtStack_OnRecvListener* appListener)
+{
+	Queue_put(handle->recvEventQ, &(appListener->_elem));
+}
+
+void BtStack_removeOnRecv(const BtStack_SvcHandle* handle, BtStack_OnRecvListener* appListener)
+{
+	Queue_remove(&(appListener->_elem));
 }
 
 void BtStack_framePrint(const BtStack_Frame* frame, KfpPrintFormat format)
@@ -201,110 +152,108 @@ void BtStack_framePrint(const BtStack_Frame* frame, KfpPrintFormat format)
 	{
 		if (format == KFPPRINTFORMAT_ASCII)
 		{
-			System_printf("%c", frame->payload.b8[i]);
+			System_printf(" %c ", frame->payload.b8[i]);
 		}
 		else if (format == KFPPRINTFORMAT_HEX)
 		{
-			System_printf("%x", frame->payload.b8[i]);
+			System_printf(" %x", frame->payload.b8[i]);
 		}
 	}
+	System_printf("\n");
 	System_flush();
 }
 
-void rxFxn(UArg param0, UArg param1)
+void rxFxn(UArg handle, UArg param1)
 {
-	// Declare state variables
-	Bool inFrame = FALSE;
-	uint8_t frIndex = 0;
+	// casting service handle
+	BtStack_SvcHandle* btStackHandle = (BtStack_SvcHandle*) handle;
 
-	// Buffers
-	BtStack_Frame tempFr;
+	// create UART socket
+	UART_Params params;
+	UART_Params_init(&params);
+	params.baudRate = btStackHandle->baud;
+	params.writeDataMode = UART_DATA_BINARY;
+	params.readDataMode = UART_DATA_BINARY;
+	params.readReturnMode = UART_RETURN_FULL;
+	params.readEcho = UART_ECHO_OFF;
+	btStackHandle->btSocket = UART_open(btStackHandle->uartPeriphIndex, &params);
+
+	// state variables for frame processing
+	bool inFrame = FALSE;
+	uint8_t frIndex = 0;
+	BtStack_Frame recvFrame;
 
 	while(TRUE)
 	{
-		// semaphore must always be 0 on read so that it will wait until read is finished
-		Semaphore_pend(rxSem, BIOS_WAIT_FOREVER);
+		char rxBuffer[1];
+		char escRxBuffer[1];    // read characters following escape into different buffer
 
-		// open socket
-		UART_Handle s;
-		UART_Params params;
-		UART_Params_init(&params);
-		params.baudRate = uartBaud;
-		params.writeDataMode = UART_DATA_BINARY;
-		params.readMode = UART_MODE_CALLBACK;
-		params.readCallback = (UART_Callback) onReceive;
-		params.readDataMode = UART_DATA_BINARY;
-		params.readReturnMode = UART_RETURN_FULL;
-		params.readEcho = UART_ECHO_OFF;
-		s = UART_open(Board_BT1, &params);
+		UART_read(btStackHandle->btSocket, rxBuffer, 1);
 
-		// read UART buffer and decode
-		UART_read(s, NULL, 1);
-		Semaphore_pend(rxSem, BIOS_WAIT_FOREVER);
-
-		switch(tempRx[0])
+		switch(rxBuffer[0])
 		{
 		case(SLIP_END):
 				if (inFrame)
 				{
 					if (frIndex == (KFP_FRAME_SIZE-2))
 					{
-						// end of frame, call callback to interpret it
-						if (rxCallback != NULL)
+						// end of frame, signal applications
+						while(!Queue_empty(btStackHandle->recvEventQ))
 						{
-							rxCallback(&tempFr);
+							BtStack_OnRecvListener* appListener = Queue_dequeue(btStackHandle->recvEventQ);
+							if (appListener->callback != NULL)
+							{
+								appListener->callback(&recvFrame);
+							}
 						}
 					}
 
-					// ignore corrupt frames
+					// reset states, ignore corrupt frames
 					frIndex = 0;
 					inFrame = FALSE;
-
+					Task_sleep(btStackHandle->rxSleep);
 					break;
 				}
 				else
 				{
-					inFrame = TRUE;		// start new frame
+					// start a new frame
+					inFrame = TRUE;
 					frIndex = 0;
 					break;
 				}
 		case(SLIP_ESC):
 				if (inFrame)
 				{
-					UART_read(s, tempRx, 1);
-					switch(tempRx[0])
+					UART_read(btStackHandle->btSocket, escRxBuffer, 1);
+					switch(escRxBuffer[0])
 					{
 					case(SLIP_ESC_END):
-							tempFr.b8[frIndex] = SLIP_END;
+							recvFrame.b8[frIndex] = SLIP_END;
 							frIndex++;
 							break;
 					case(SLIP_ESC_ESC):
-							tempFr.b8[frIndex] = SLIP_ESC;
+							recvFrame.b8[frIndex] = SLIP_ESC;
 							frIndex++;
 							break;
 					default:
-						break;	// invalid post ESC character
+							break;   // invalid escape character
 					}
-					break;
 				}
 				else
 				{
-					break;		// ignore corrupt frames
+					break;           // ignore stray characters
 				}
 		default:
-			if (inFrame)
-			{
-				// standard character store
-				tempFr.b8[frIndex] = tempRx[0];
-				frIndex++;
-				break;
-			}
+				if (inFrame)
+				{
+					// standard character receive
+					recvFrame.b8[frIndex] = rxBuffer[0];
+					frIndex++;
+				}
+				else
+				{
+					break;           // ignore stray characters
+				}
 		}
 	}
-}
-
-void onReceive(UART_Handle handle, char* received)
-{
-	strncpy(tempRx, received, 1);
-	Semaphore_post(rxSem);
 }

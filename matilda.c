@@ -47,8 +47,6 @@
 /* Killalot Framework header files */
 #include "BtStack.h"
 
-#include "BtCtl.h"
-
 /*
  *  ======== main ========
  */
@@ -57,21 +55,28 @@ Int main(Void)
     /* Call board init functions */
     Board_initGeneral();
     Board_initGPIO();
+    Board_initUART();
     // Board_initDMA();
     // Board_initI2C();
     // Board_initSPI();
-    Board_initUART();
     // Board_initUSB(Board_USBDEVICE);
     // Board_initWatchdog();
     // Board_initWiFi();
 
     /* Start services */
-    BtStack_attachCallback(BtCtl_rxCallback);
-    BtStack_start();
-
-    System_printf("Matilda... All systems are go\n");
-    /* SysMin will only print to the console when you call flush or exit */
-    System_flush();
+    BtStack_SvcHandle mainBtSvc;
+    BtStack_handleInit(&mainBtSvc, "mainBt\0", Board_BT2, BTBAUD_9600);
+    int8_t btStackStatus = BtStack_start(&mainBtSvc);
+    if (btStackStatus == 0)
+    {
+    	System_printf("BtStack started successfully\n");
+    	System_flush();
+    }
+    else if (btStackStatus == -1)
+    {
+    	System_printf("BtStack failed to start: task error\n");
+    	System_flush();
+    }
 
     /* Start BIOS */
     BIOS_start();
