@@ -67,7 +67,7 @@ typedef union
  * \typedef BtStack_callback
  * \brief Bluetooth stack service callback type
  */
-typedef void (*BtStack_Callback)(const BtStack_Frame*);
+typedef void (*BtStack_Callback)(const BtStack_Frame*, void* appInstance);
 
 /**
  * \struct BtStack_OnRecvListener
@@ -77,6 +77,7 @@ typedef struct
 {
 	Queue_Elem _elem;
 	BtStack_Callback callback;	//! Callback to execute on desired event
+	void* appInstance;          //! Application listening to receive event
 } BtStack_OnRecvListener;
 
 /**
@@ -124,7 +125,7 @@ int BtStack_start(BtStack_SvcHandle* handle);
  * \brief Stops bluetooth stack service
  *
  * \param handle Pointer to the handle of the service instance to be stopped
- * \return Returns 0 for success, -1 for failure
+ * \return Returns 0 for success, -1 if applications are still listening
  */
 int BtStack_stop(BtStack_SvcHandle* handle);
 
