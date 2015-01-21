@@ -46,6 +46,7 @@
 
 /* Killalot Framework header files */
 #include "BtStack.h"
+#include "PwrMgmt.h"
 
 /*
  *  ======== main ========
@@ -77,6 +78,10 @@ Int main(Void)
     	System_printf("BtStack failed to start: task error\n");
     	System_flush();
     }
+
+    PwrMgmt_SvcHandle mainPwrSvc;
+    PwrMgmt_handleInit(&mainPwrSvc, "mainPwr\0", Board_INTER, 0x02);
+    PwrMgmt_start(&mainPwrSvc);
 
     /* Start BIOS */
     BIOS_start();

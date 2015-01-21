@@ -11,14 +11,20 @@
 #include <xdc/runtime/Error.h>
 #include <xdc/runtime/System.h>
 #include <ti/drivers/I2C.h>
+#include <string.h>
 
-#include "Board.h"
+#define PWRMGMT_SVCNAMELEN 8
 
-#define DEFAULT_PWRBOARD_ADDR 0x02
 #define BATTERY_REQUEST_CODE 131
 typedef enum {DRV_PWR = 101, DRV_YAW = 102} DrvComponent;
 
-static uint8_t pwrBoardAddr = DEFAULT_PWRBOARD_ADDR;
+struct PwrMgmt_SvcHandle
+{
+	unsigned int i2cPeriphIndex;
+	unsigned int pwrBoardAddr;
+	bool started;
+	char svcName[PWRMGMT_SVCNAMELEN];
+};
 
 typedef union
 {
@@ -30,7 +36,30 @@ typedef union
 	UChar b8[2];
 } PwrMgmt_Message;
 
-int8_t PwrMgmt_drive(int8_t power, int8_t yaw)
+void PwrMgmt_handleInit(PwrMgmt_SvcHandle* pwrHandle, char* name, unsigned int i2cPeriphIndex, unsigned int pwrBoardAddr)
+{
+	pwrHandle->i2cPeriphIndex = i2cPeriphIndex;
+	pwrHandle->pwrBoardAddr = pwrBoardAddr;
+	strncpy(pwrHandle->svcName, name, PWRMGMT_SVCNAMELEN);
+
+	pwrHandle->started = FALSE;
+}
+
+int PwrMgmt_start(PwrMgmt_SvcHandle* pwrHandle)
+{
+	pwrHandle->started = TRUE;
+
+	return 0;
+}
+
+int PwrMgmt_stop(PwrMgmt_SvcHandle* pwrInstance)
+{
+	pwrInstance->started = FALSE;
+
+	return 0;
+}
+
+int PwrMgmt_drive(PwrMgmt_SvcHandle* pwrInstance, int power, int yaw)
 {
 	// Generate transaction messages
 	PwrMgmt_Message pwrMsg;
@@ -46,7 +75,7 @@ int8_t PwrMgmt_drive(int8_t power, int8_t yaw)
 	I2C_Params params;
 	I2C_Params_init(&params);
 	params.transferMode = I2C_MODE_BLOCKING;
-	s = I2C_open(Board_INTER, &params);
+	s = I2C_open(pwrInstance->i2cPeriphIndex, &params);
 	if (!s)
 	{
 		return -1;
@@ -57,7 +86,7 @@ int8_t PwrMgmt_drive(int8_t power, int8_t yaw)
 	pwrTransaction.writeBuf = pwrMsg.b8;
 	pwrTransaction.writeCount = 2;
 	pwrTransaction.readCount = 0;
-	pwrTransaction.slaveAddress = pwrBoardAddr;
+	pwrTransaction.slaveAddress = pwrInstance->pwrBoardAddr;
 	if (!I2C_transfer(s, &pwrTransaction))
 	{
 		I2C_close(s);
@@ -68,7 +97,7 @@ int8_t PwrMgmt_drive(int8_t power, int8_t yaw)
 	yawTransaction.writeBuf = yawMsg.b8;
 	yawTransaction.writeCount = 2;
 	yawTransaction.readCount = 0;
-	yawTransaction.slaveAddress = pwrBoardAddr;
+	yawTransaction.slaveAddress = pwrInstance->pwrBoardAddr;
 	if (!I2C_transfer(s, &yawTransaction))
 	{
 		I2C_close(s);
@@ -78,7 +107,7 @@ int8_t PwrMgmt_drive(int8_t power, int8_t yaw)
 	return 0;
 }
 
-int8_t PwrMgmt_weapon(PwrMgmt_Weapon weapon, uint8_t state)
+int PwrMgmt_weapon(PwrMgmt_SvcHandle* pwrInstance, PwrMgmt_Weapon weapon, unsigned int state)
 {
 	// Generate transaction messages
 	PwrMgmt_Message weaponMsg;
@@ -90,7 +119,7 @@ int8_t PwrMgmt_weapon(PwrMgmt_Weapon weapon, uint8_t state)
 	I2C_Params params;
 	I2C_Params_init(&params);
 	params.transferMode = I2C_MODE_BLOCKING;
-	s = I2C_open(Board_INTER, &params);
+	s = I2C_open(pwrInstance->i2cPeriphIndex, &params);
 	if (!s)
 	{
 		return -1;
@@ -101,7 +130,7 @@ int8_t PwrMgmt_weapon(PwrMgmt_Weapon weapon, uint8_t state)
 	weaponTransaction.writeBuf = weaponMsg.b8;
 	weaponTransaction.writeCount = 2;
 	weaponTransaction.readCount = 0;
-	weaponTransaction.slaveAddress = pwrBoardAddr;
+	weaponTransaction.slaveAddress = pwrInstance->pwrBoardAddr;
 	if (!I2C_transfer(s, &weaponTransaction))
 	{
 		I2C_close(s);
@@ -110,7 +139,7 @@ int8_t PwrMgmt_weapon(PwrMgmt_Weapon weapon, uint8_t state)
 	return 0;
 }
 
-int8_t PwrMgmt_batteryRemaining(void)
+int PwrMgmt_batteryRemaining(PwrMgmt_SvcHandle* pwrInstance)
 {
 	// Generate transaction messages
 	PwrMgmt_Message batteryMsg;
@@ -121,7 +150,7 @@ int8_t PwrMgmt_batteryRemaining(void)
 	I2C_Params params;
 	I2C_Params_init(&params);
 	params.transferMode = I2C_MODE_BLOCKING;
-	s = I2C_open(Board_INTER, &params);
+	s = I2C_open(pwrInstance->i2cPeriphIndex, &params);
 	if (!s)
 	{
 		return -1;
@@ -135,7 +164,7 @@ int8_t PwrMgmt_batteryRemaining(void)
 	batteryTransaction.writeCount = 1;
 	batteryTransaction.readBuf = &batteryRemaining;
 	batteryTransaction.readCount = 1;
-	batteryTransaction.slaveAddress = pwrBoardAddr;
+	batteryTransaction.slaveAddress = pwrInstance->pwrBoardAddr;
 	if (!I2C_transfer(s, &batteryTransaction))
 	{
 		I2C_close(s);
