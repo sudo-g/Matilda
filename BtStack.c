@@ -64,13 +64,20 @@ int BtStack_start(BtStack_SvcHandle* handle)
 
 int BtStack_stop(BtStack_SvcHandle* handle)
 {
-	UART_readCancel(handle->btSocket);
-	UART_close(handle->btSocket);
-	Queue_delete(&(handle->recvEventQ));
-	Task_delete(&(handle->rxTask));
-	handle->started = FALSE;
+	if (Queue_empty(handle->recvEventQ))
+	{
+		UART_readCancel(handle->btSocket);
+		UART_close(handle->btSocket);
+		Queue_delete(&(handle->recvEventQ));
+		Task_delete(&(handle->rxTask));
+		handle->started = FALSE;
+		return 0;
+	}
+	else
+	{
+		return -1;
+	}
 
-	return 0;
 }
 
 Bool BtStack_hasStarted(const BtStack_SvcHandle* handle)
@@ -203,7 +210,7 @@ void rxFxn(UArg handle, UArg param1)
 							BtStack_OnRecvListener* appListener = Queue_dequeue(btStackHandle->recvEventQ);
 							if (appListener->callback != NULL)
 							{
-								appListener->callback(&recvFrame);
+								appListener->callback(appListener->appInstance, &recvFrame);
 							}
 						}
 					}
