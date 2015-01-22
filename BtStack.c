@@ -8,8 +8,6 @@
 
 #include "BtStack.h"
 
-#include <xdc/runtime/Error.h>
-
 #include <xdc/runtime/System.h>
 #include <string.h>
 #include "Board.h"

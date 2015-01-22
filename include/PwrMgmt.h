@@ -9,13 +9,23 @@
 #ifndef PWR_MGMT
 #define PWR_MGMT
 
+#define PWRMGMT_SVCNAMELEN 8
+
+#include <xdc/std.h>
+
 typedef enum {WEAPON_1 = 121, WEAPON_2 = 122} PwrMgmt_Weapon;
 
 /**
  * \struct PwrMgmt_SvcHandle
  * \brief Handler to an instance of a PwrMgmt app
  */
-typedef struct PwrMgmt_SvcHandle PwrMgmt_SvcHandle;
+typedef struct
+{
+	unsigned int i2cPeriphIndex;
+	unsigned int pwrBoardAddr;
+	Bool started;
+	char svcName[PWRMGMT_SVCNAMELEN];
+} PwrMgmt_SvcHandle ;
 
 /**
  * \brief Initializes handle for default service configuration

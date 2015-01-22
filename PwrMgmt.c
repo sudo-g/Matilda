@@ -6,25 +6,13 @@
  * \date 2014-12-06
  */
 
-#include "pwrMgmt.h"
+#include "PwrMgmt.h"
 
-#include <xdc/runtime/Error.h>
-#include <xdc/runtime/System.h>
 #include <ti/drivers/I2C.h>
 #include <string.h>
 
-#define PWRMGMT_SVCNAMELEN 8
-
 #define BATTERY_REQUEST_CODE 131
 typedef enum {DRV_PWR = 101, DRV_YAW = 102} DrvComponent;
-
-struct PwrMgmt_SvcHandle
-{
-	unsigned int i2cPeriphIndex;
-	unsigned int pwrBoardAddr;
-	bool started;
-	char svcName[PWRMGMT_SVCNAMELEN];
-};
 
 typedef union
 {

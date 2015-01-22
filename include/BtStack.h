@@ -107,8 +107,8 @@ typedef struct
  * \brief Initializes handle for default service configuration
  *
  * \param handle Pointer to handle
- * \param uartPeriphIndex UART peripheral connected to bluetooth to use
  * \param name String name for service instance (8 char limit)
+ * \param uartPeriphIndex UART peripheral connected to bluetooth to use
  * \param baud Baud rate to use on UART peripheral connect to bluetooth
  */
 void BtStack_handleInit(BtStack_SvcHandle* handle, char* name, unsigned int uartPeriphIndex, BtBaud baud);

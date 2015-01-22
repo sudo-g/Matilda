@@ -48,6 +48,8 @@
 #include "BtStack.h"
 #include "PwrMgmt.h"
 
+#include "BtCtl.h"
+
 /*
  *  ======== main ========
  */
@@ -57,17 +59,27 @@ Int main(Void)
     Board_initGeneral();
     Board_initGPIO();
     Board_initUART();
+    Board_initI2C();
     // Board_initDMA();
-    // Board_initI2C();
     // Board_initSPI();
     // Board_initUSB(Board_USBDEVICE);
     // Board_initWatchdog();
     // Board_initWiFi();
 
-    /* Start services */
+    /* Setup services */
     BtStack_SvcHandle mainBtSvc;
     BtStack_handleInit(&mainBtSvc, "mainBt\0", Board_BT2, BTBAUD_9600);
-    int8_t btStackStatus = BtStack_start(&mainBtSvc);
+
+    PwrMgmt_SvcHandle mainPwrSvc;
+    PwrMgmt_handleInit(&mainPwrSvc, "mainPwr\0", Board_INTER, 0x02);
+
+    /* Setup apps */
+    BtCtl_AppHandle mainBtApp;
+    BtCtl_handleInit(&mainBtApp, "btCtl\0", &mainBtSvc, &mainPwrSvc);
+
+
+    /* Start services */
+    int btStackStatus = BtStack_start(&mainBtSvc);
     if (btStackStatus == 0)
     {
     	System_printf("BtStack started successfully\n");
@@ -79,9 +91,29 @@ Int main(Void)
     	System_flush();
     }
 
-    PwrMgmt_SvcHandle mainPwrSvc;
-    PwrMgmt_handleInit(&mainPwrSvc, "mainPwr\0", Board_INTER, 0x02);
-    PwrMgmt_start(&mainPwrSvc);
+    int pwrMgmtStatus = PwrMgmt_start(&mainPwrSvc);
+    if (pwrMgmtStatus == 0)
+    {
+    	System_printf("PwrMgmt started successfully\n");
+    	System_flush();
+    }
+    else if (pwrMgmtStatus == -1)
+    {
+    	System_printf("PwrMgmt failed to start\n");
+    	System_flush();
+    }
+
+    /* Start apps */
+    int btCtlStatus = BtCtl_start(&mainBtApp, &mainBtSvc);
+    if (btCtlStatus == 0)
+    {
+    	System_printf("BtCtl started successfully\n");
+    	System_flush();
+    }
+    else if (pwrMgmtStatus == -1)
+    {
+    	System_printf("BtCtl failed to start\n");
+    }
 
     /* Start BIOS */
     BIOS_start();
