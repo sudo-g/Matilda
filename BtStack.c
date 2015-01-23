@@ -209,6 +209,7 @@ void rxFxn(UArg handle, UArg param1)
 							if (appListener->callback != NULL)
 							{
 								appListener->callback(appListener->appInstance, &recvFrame);
+								Queue_enqueue(btStackHandle->recvEventQ, &(appListener->_elem));
 							}
 						}
 					}
