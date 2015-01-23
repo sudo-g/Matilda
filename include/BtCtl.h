@@ -42,10 +42,9 @@ void BtCtl_handleInit(BtCtl_AppHandle* ctlHandle, char* name, BtStack_SvcHandle*
  * \brief Starts bluetooth control application
  *
  * \param ctlInstance Pointer to the handle containing configuration to this app
- * \param btInstance Pointer to the handle of the BtStack instance to listen for receive events
  * \return Returns 0 for success, -1 for failure
  */
-int BtCtl_start(BtCtl_AppHandle* ctlInstance, const BtStack_SvcHandle* btInstance);
+int BtCtl_start(BtCtl_AppHandle* ctlInstance);
 
 /**
  * \brief Stops bluetooth control application

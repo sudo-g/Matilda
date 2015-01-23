@@ -18,10 +18,10 @@ void BtCtl_handleInit(BtCtl_AppHandle* ctlHandle, char* name, BtStack_SvcHandle*
 	strncpy(ctlHandle->appName, name, BTCTL_APPNAMELEN);
 }
 
-int BtCtl_start(BtCtl_AppHandle* ctlInstance, const BtStack_SvcHandle* btInstance)
+int BtCtl_start(BtCtl_AppHandle* ctlInstance)
 {
 	BtStack_onRecvListenerInit(&ctlInstance->rxListener, (BtStack_Callback) BtCtl_rxCallback);
-	BtStack_registerOnRecv(btInstance, &(ctlInstance->rxListener));
+	BtStack_registerOnRecv(ctlInstance->btStackInstance, &(ctlInstance->rxListener));
 
 	ctlInstance->started = TRUE;
 

@@ -41,6 +41,9 @@
 /* BIOS Header files */
 #include <ti/sysbios/BIOS.h>
 
+// TODO: Debug only, remove
+#include <ti/drivers/I2C.h>
+
 /* Board Header file */
 #include "Board.h"
 
@@ -104,7 +107,7 @@ Int main(Void)
     }
 
     /* Start apps */
-    int btCtlStatus = BtCtl_start(&mainBtApp, &mainBtSvc);
+    int btCtlStatus = BtCtl_start(&mainBtApp);
     if (btCtlStatus == 0)
     {
     	System_printf("BtCtl started successfully\n");
