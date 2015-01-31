@@ -20,7 +20,8 @@ void BtCtl_handleInit(BtCtl_AppHandle* ctlHandle, char* name, BtStack_SvcHandle*
 
 int BtCtl_start(BtCtl_AppHandle* ctlInstance)
 {
-	BtStack_onRecvListenerInit(&ctlInstance->rxListener, (BtStack_Callback) BtCtl_rxCallback);
+	eventHandlerInit(&(ctlInstance->rxHandler), ctlInstance, BtCtl_rxCallback);
+	eventListenerInit(&(ctlInstance->rxListener), &(ctlInstance->rxHandler));
 	BtStack_registerOnRecv(ctlInstance->btStackInstance, &(ctlInstance->rxListener));
 
 	ctlInstance->started = TRUE;
@@ -36,9 +37,10 @@ int BtCtl_stop(BtCtl_AppHandle* ctlInstance)
 	return 0;
 }
 
-void BtCtl_rxCallback(void* instance, const BtStack_Frame* frame)
+void BtCtl_rxCallback(UArg pInstance, UArg pFrame)
 {
-	BtCtl_AppHandle* appInstance = (BtCtl_AppHandle*) instance;
+	BtCtl_AppHandle* instance = (BtCtl_AppHandle*) pInstance;
+	BtStack_Frame* frame = (BtStack_Frame*) pFrame;
 
 	if (frame->id.b8[0] == 1)
 	{
@@ -46,7 +48,7 @@ void BtCtl_rxCallback(void* instance, const BtStack_Frame* frame)
 		if (frame->id.b8[3] == 0)
 		{
 			// channel 2 and 3 of Phantom is yaw and power respectively
-			PwrMgmt_drive(appInstance->pwrMgmtInstance, frame->payload.b8[3], frame->payload.b8[2]);
+			PwrMgmt_drive(instance->pwrMgmtInstance, frame->payload.b8[3], frame->payload.b8[2]);
 		}
 
 		// frame identiified as last 8 channels, which are digital
@@ -56,11 +58,11 @@ void BtCtl_rxCallback(void* instance, const BtStack_Frame* frame)
 			// channel 10 of Phantom is toggle switches
 			if (frame->payload.b8[2] == 127)
 			{
-				PwrMgmt_weapon(appInstance->pwrMgmtInstance, WEAPON_1, 1);
+				PwrMgmt_weapon(instance->pwrMgmtInstance, WEAPON_1, 1);
 			}
 			else if (frame->payload.b8[2] == 0)
 			{
-				PwrMgmt_weapon(appInstance->pwrMgmtInstance, WEAPON_1, 0);
+				PwrMgmt_weapon(instance->pwrMgmtInstance, WEAPON_1, 0);
 			}
 		}
 	}

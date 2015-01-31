@@ -9,6 +9,7 @@
 #ifndef BT_CTL
 #define BT_CTL
 
+#include "service.h"
 #include "BtStack.h"
 #include "PwrMgmt.h"
 
@@ -22,7 +23,8 @@ typedef struct
 {
 	BtStack_SvcHandle* btStackInstance;
 	PwrMgmt_SvcHandle* pwrMgmtInstance;
-	BtStack_OnRecvListener rxListener;
+	EventListener rxListener;
+	EventHandler rxHandler;
 	Bool started;
 
 	char appName[BTCTL_APPNAMELEN];
@@ -57,9 +59,9 @@ int BtCtl_stop(BtCtl_AppHandle* ctlInstance);
 /**
  * \brief Sets drive speed according to received frame
  *
- * \param instance BtCtl instance the service is signalling
- * \param frame Bluetooth frame received
+ * \param pInstance Uncast BtCtl app instance being signalled
+ * \param pFrame Uncast bluetooth frame received
  */
-void BtCtl_rxCallback(void* instance, const BtStack_Frame* frame);
+void BtCtl_rxCallback(UArg pInstance, UArg pFrame);
 
 #endif

@@ -9,9 +9,8 @@
 #ifndef PWR_MGMT
 #define PWR_MGMT
 
-#define PWRMGMT_SVCNAMELEN 8
-
 #include <xdc/std.h>
+#include "service.h"
 
 typedef enum {WEAPON_1 = 121, WEAPON_2 = 122} PwrMgmt_Weapon;
 
@@ -24,7 +23,7 @@ typedef struct
 	unsigned int i2cPeriphIndex;
 	unsigned int pwrBoardAddr;
 	Bool started;
-	char svcName[PWRMGMT_SVCNAMELEN];
+	char svcName[SVC_NAME_LEN];
 } PwrMgmt_SvcHandle ;
 
 /**

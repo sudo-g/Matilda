@@ -10,6 +10,7 @@
 
 #include <ti/drivers/I2C.h>
 #include <string.h>
+#include <xdc/runtime/System.h>
 
 #define BATTERY_REQUEST_CODE 131
 typedef enum {DRV_PWR = 101, DRV_YAW = 102} DrvComponent;
@@ -28,7 +29,7 @@ void PwrMgmt_handleInit(PwrMgmt_SvcHandle* pwrHandle, char* name, unsigned int i
 {
 	pwrHandle->i2cPeriphIndex = i2cPeriphIndex;
 	pwrHandle->pwrBoardAddr = pwrBoardAddr;
-	strncpy(pwrHandle->svcName, name, PWRMGMT_SVCNAMELEN);
+	strncpy(pwrHandle->svcName, name, SVC_NAME_LEN);
 
 	pwrHandle->started = FALSE;
 }
@@ -91,6 +92,8 @@ int PwrMgmt_drive(PwrMgmt_SvcHandle* pwrInstance, int power, int yaw)
 		I2C_close(s);
 		return  -2;
 	}
+	System_printf("Driving\n");
+	System_flush();
 
 	return 0;
 }

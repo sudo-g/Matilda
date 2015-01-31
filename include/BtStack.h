@@ -13,6 +13,7 @@
 #include <ti/sysbios/knl/Queue.h>
 #include <ti/sysbios/BIOS.h>
 #include <ti/drivers/UART.h>
+#include "service.h"
 
 #define KFP_FRAME_SIZE 14   //! No. of data bytes in Killalot frame protocol
 #define KFP_WORST_SIZE 26   //! Maximum frame size if escape characters are used
@@ -64,23 +65,6 @@ typedef union
 } BtStack_Frame;
 
 /**
- * \typedef BtStack_callback
- * \brief Bluetooth stack service callback type
- */
-typedef void (*BtStack_Callback)(const BtStack_Frame*, void* appInstance);
-
-/**
- * \struct BtStack_OnRecvListener
- * \brief Binder for application callbacks to receive events of this service
- */
-typedef struct
-{
-	Queue_Elem _elem;
-	BtStack_Callback callback;	//! Callback to execute on desired event
-	void* appInstance;          //! Application listening to receive event
-} BtStack_OnRecvListener;
-
-/**
  * \struct BtStack_SvcHandle
  * \brief Handler to an instance of a BtStack service
  */
@@ -100,7 +84,7 @@ typedef struct
 
 	Bool started;                   //! Service status
 
-	char svcName[BTSTACK_SVCNAMELEN];   //! String identifier for debug and console
+	char svcName[SVC_NAME_LEN];		//! String identifier for debug and console
 } BtStack_SvcHandle;
 
 /**
@@ -147,20 +131,12 @@ Bool BtStack_hasStarted(const BtStack_SvcHandle* handle);
 int BtStack_queue(const BtStack_SvcHandle* handle, const BtStack_Frame* frame);
 
 /**
- * \brief Initializes bluetooth stack service listeners for applications
- *
- * \param appListener Pointer to the listener to initialize
- * \oaram callback Application callback to execute on event
- */
-void BtStack_onRecvListenerInit(BtStack_OnRecvListener* appListener, BtStack_Callback callback);
-
-/**
  * \brief Make application listener listen to on receive events of this service
  *
  * \param handle Pointer to the handle of the service instance to listen to
  * \param appListener Pointer to listener to register receive events
  */
-void BtStack_registerOnRecv(const BtStack_SvcHandle* handle, BtStack_OnRecvListener* appListener);
+void BtStack_registerOnRecv(const BtStack_SvcHandle* handle, EventListener* appListener);
 
 /**
  * \brief Stop application listener from listening to on receive events of this service
@@ -168,7 +144,7 @@ void BtStack_registerOnRecv(const BtStack_SvcHandle* handle, BtStack_OnRecvListe
  * \param handle Pointer to the handle of the service instance to stop listening
  * \param appListener Pointer to listener to remove receive events
  */
-void BtStack_removeOnRecv(const BtStack_SvcHandle* handle, BtStack_OnRecvListener* appListener);
+void BtStack_removeOnRecv(const BtStack_SvcHandle* handle, EventListener* appListener);
 
 /**
  * \brief Prints KFP frames to the console

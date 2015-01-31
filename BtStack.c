@@ -128,17 +128,12 @@ int BtStack_queue(const BtStack_SvcHandle* handle, const BtStack_Frame* frame)
 	return ret;
 }
 
-void BtStack_onRecvListenerInit(BtStack_OnRecvListener* appListener, BtStack_Callback callback)
-{
-	appListener->callback = callback;
-}
-
-void BtStack_registerOnRecv(const BtStack_SvcHandle* handle, BtStack_OnRecvListener* appListener)
+void BtStack_registerOnRecv(const BtStack_SvcHandle* handle, EventListener* appListener)
 {
 	Queue_put(handle->recvEventQ, &(appListener->_elem));
 }
 
-void BtStack_removeOnRecv(const BtStack_SvcHandle* handle, BtStack_OnRecvListener* appListener)
+void BtStack_removeOnRecv(const BtStack_SvcHandle* handle, EventListener* appListener)
 {
 	Queue_remove(&(appListener->_elem));
 }
@@ -205,10 +200,10 @@ void rxFxn(UArg handle, UArg param1)
 						// end of frame, signal applications
 						while(!Queue_empty(btStackHandle->recvEventQ))
 						{
-							BtStack_OnRecvListener* appListener = Queue_dequeue(btStackHandle->recvEventQ);
-							if (appListener->callback != NULL)
+							EventListener* appListener = Queue_dequeue(btStackHandle->recvEventQ);
+							if (appListener->handler->callback != NULL)
 							{
-								appListener->callback(appListener->appInstance, &recvFrame);
+								appListener->handler->callback((UArg) appListener->handler->instance, (UArg) &recvFrame);
 								Queue_enqueue(btStackHandle->recvEventQ, &(appListener->_elem));
 							}
 						}
