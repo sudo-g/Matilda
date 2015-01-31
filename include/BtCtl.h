@@ -23,6 +23,7 @@ typedef struct
 {
 	BtStack_SvcHandle* btStackInstance;
 	PwrMgmt_SvcHandle* pwrMgmtInstance;
+	unsigned int ctlId;
 	EventListener rxListener;
 	EventHandler rxHandler;
 	Bool started;
@@ -37,8 +38,9 @@ typedef struct
  * \param name String name for app instance
  * \param btInstance Handle to the bluetooth stack service instance
  * \param pwrInstance Handle to the power management service instance
+ * \param ctlId ID of controller to listen to
  */
-void BtCtl_handleInit(BtCtl_AppHandle* ctlHandle, char* name, BtStack_SvcHandle* btInstance, PwrMgmt_SvcHandle* pwrInstance);
+void BtCtl_handleInit(BtCtl_AppHandle* ctlHandle, char* name, BtStack_SvcHandle* btInstance, PwrMgmt_SvcHandle* pwrInstance, unsigned int ctlId);
 
 /**
  * \brief Starts bluetooth control application

@@ -78,7 +78,7 @@ Int main(Void)
 
     /* Setup apps */
     BtCtl_AppHandle mainBtApp;
-    BtCtl_handleInit(&mainBtApp, "btCtl\0", &mainBtSvc, &mainPwrSvc);
+    BtCtl_handleInit(&mainBtApp, "btCtl\0", &mainBtSvc, &mainPwrSvc, 0x01);
 
 
     /* Start services */

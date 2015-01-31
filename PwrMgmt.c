@@ -96,6 +96,10 @@ int PwrMgmt_drive(PwrMgmt_SvcHandle* pwrInstance, int power, int yaw)
 	// Finish transmissions
 	I2C_close(s);
 
+	// TODO: Debug only
+	System_printf("Pwr %d, Yaw %d", power, yaw);
+    System_flush();
+
 	return 0;
 }
 
@@ -128,11 +132,20 @@ int PwrMgmt_weapon(PwrMgmt_SvcHandle* pwrInstance, PwrMgmt_Weapon weapon, unsign
 		I2C_close(s);
 		return -2;
 	}
+
+	// Finish transmissions
+	I2C_close(s);
+
+	// TODO: Debug only
+	System_printf("Wpn %d, St %d", weapon, state);
+    System_flush();
+
 	return 0;
 }
 
 int PwrMgmt_batteryRemaining(PwrMgmt_SvcHandle* pwrInstance)
 {
+	/*
 	// Generate transaction messages
 	PwrMgmt_Message batteryMsg;
 	batteryMsg.component = BATTERY_REQUEST_CODE;
@@ -162,5 +175,6 @@ int PwrMgmt_batteryRemaining(PwrMgmt_SvcHandle* pwrInstance)
 		I2C_close(s);
 		return -2;
 	}
-	return batteryRemaining;
+	return batteryRemaining; */
+	return 0;
 }

@@ -10,10 +10,11 @@
 
 #include <string.h>
 
-void BtCtl_handleInit(BtCtl_AppHandle* ctlHandle, char* name, BtStack_SvcHandle* btInstance, PwrMgmt_SvcHandle* pwrInstance)
+void BtCtl_handleInit(BtCtl_AppHandle* ctlHandle, char* name, BtStack_SvcHandle* btInstance, PwrMgmt_SvcHandle* pwrInstance, unsigned int ctlId)
 {
 	ctlHandle->btStackInstance = btInstance;
 	ctlHandle->pwrMgmtInstance = pwrInstance;
+	ctlHandle->ctlId = ctlId;
 
 	strncpy(ctlHandle->appName, name, BTCTL_APPNAMELEN);
 }
@@ -42,16 +43,17 @@ void BtCtl_rxCallback(UArg pInstance, UArg pFrame)
 	BtCtl_AppHandle* instance = (BtCtl_AppHandle*) pInstance;
 	BtStack_Frame* frame = (BtStack_Frame*) pFrame;
 
-	if (frame->id.b8[0] == 1)
+	// frame ID == 1 for controller
+	if (frame->id.b8[0] == instance->ctlId)
 	{
-		// frame identified as first 8 channels, which are analog
+		// frame identified to represent first 8 channels, which are analog
 		if (frame->id.b8[3] == 0)
 		{
 			// channel 2 and 3 of Phantom is yaw and power respectively
 			PwrMgmt_drive(instance->pwrMgmtInstance, frame->payload.b8[3], frame->payload.b8[2]);
 		}
 
-		// frame identiified as last 8 channels, which are digital
+		// frame identiified to represent last 8 channels, which are digital
 		// for digital channels, 127 is on and 0 is off
 		if (frame->id.b8[3] == 8)
 		{
