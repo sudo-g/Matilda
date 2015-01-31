@@ -92,8 +92,9 @@ int PwrMgmt_drive(PwrMgmt_SvcHandle* pwrInstance, int power, int yaw)
 		I2C_close(s);
 		return  -2;
 	}
-	System_printf("Driving\n");
-	System_flush();
+
+	// Finish transmissions
+	I2C_close(s);
 
 	return 0;
 }
